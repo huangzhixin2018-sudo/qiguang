@@ -261,7 +261,7 @@ private struct StoryDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.horizontal, 22)
+                .padding(.horizontal, 16)
                 .padding(.top, 18)
                 .padding(.bottom, 32)
             }
@@ -463,13 +463,11 @@ private struct StoryDiaryPhotoLayout: View {
             let height = proxy.size.width * 0.625
 
             if images.count == 1, let image = images.first {
-                StoryDiaryImage(image: image)
-                    .frame(width: proxy.size.width, height: height)
+                StoryDiaryImage(image: image, width: proxy.size.width, height: height)
             } else {
                 HStack(spacing: 0) {
                     ForEach(Array(images.prefix(2).enumerated()), id: \.offset) { _, image in
-                        StoryDiaryImage(image: image)
-                            .frame(width: proxy.size.width / 2, height: height)
+                        StoryDiaryImage(image: image, width: proxy.size.width / 2, height: height)
                     }
                 }
             }
@@ -480,11 +478,14 @@ private struct StoryDiaryPhotoLayout: View {
 
 private struct StoryDiaryImage: View {
     let image: UIImage
+    let width: CGFloat
+    let height: CGFloat
 
     var body: some View {
         Image(uiImage: image)
             .resizable()
             .scaledToFill()
+            .frame(width: width, height: height)
             .clipped()
     }
 }
