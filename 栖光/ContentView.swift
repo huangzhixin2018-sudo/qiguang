@@ -244,18 +244,21 @@ private struct StoryDetailView: View {
             .padding(.horizontal, 24)
             .padding(.top, 24)
 
-            Color(.systemGray6)
-                .frame(height: 14)
-                .padding(.top, 28)
+            if !entries.isEmpty {
+                Color(.systemGray6)
+                    .opacity(0.72)
+                    .frame(height: 8)
+                    .padding(.top, 24)
 
-            LazyVStack(spacing: 22) {
-                ForEach(entries) { entry in
-                    StoryDiaryCard(entry: entry)
+                LazyVStack(spacing: 22) {
+                    ForEach(entries) { entry in
+                        StoryDiaryCard(entry: entry)
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 18)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 16)
-            .padding(.bottom, 24)
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -422,35 +425,46 @@ private struct StoryDiaryCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 16) {
             if !entry.images.isEmpty {
                 if let firstImage = entry.images.first {
-                    Image(uiImage: firstImage)
-                        .resizable()
-                        .scaledToFill()
+                    StoryDiaryImage(image: firstImage)
                         .frame(maxWidth: .infinity)
-                        .aspectRatio(1.52, contentMode: .fit)
-                        .clipped()
                 }
             }
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 9) {
                 Text(noteText)
-                    .font(.system(size: 20, weight: .medium, design: .default))
+                    .font(.system(size: 18, weight: .regular))
                     .foregroundStyle(.primary)
-                    .lineSpacing(6)
+                    .lineSpacing(5)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text(dateText)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color(.systemGray2))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color(.systemGray3))
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 18)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 4)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 18)
+        .padding(.top, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white)
+    }
+}
+
+private struct StoryDiaryImage: View {
+    let image: UIImage
+
+    var body: some View {
+        GeometryReader { proxy in
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: proxy.size.width, height: proxy.size.width * 0.625)
+                .clipped()
+        }
+        .aspectRatio(1.6, contentMode: .fit)
     }
 }
 
