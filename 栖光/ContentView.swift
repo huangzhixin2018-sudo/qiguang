@@ -256,6 +256,7 @@ private struct StoryDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
+                .padding(.horizontal, 22)
                 .padding(.top, 18)
                 .padding(.bottom, 32)
             }
@@ -425,7 +426,7 @@ private struct StoryDiaryCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 22) {
             if !entry.images.isEmpty {
                 if let firstImage = entry.images.first {
                     StoryDiaryImage(image: firstImage)
@@ -447,7 +448,6 @@ private struct StoryDiaryCard: View {
             .padding(.horizontal, 18)
             .padding(.bottom, 4)
         }
-        .padding(.top, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white)
     }
