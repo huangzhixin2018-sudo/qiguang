@@ -244,13 +244,17 @@ private struct StoryDetailView: View {
             .padding(.horizontal, 24)
             .padding(.top, 24)
 
-            LazyVStack(spacing: 18) {
+            Color(.systemGray6)
+                .frame(height: 14)
+                .padding(.top, 28)
+
+            LazyVStack(spacing: 22) {
                 ForEach(entries) { entry in
                     StoryDiaryCard(entry: entry)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 30)
+            .padding(.horizontal, 8)
+            .padding(.top, 16)
             .padding(.bottom, 24)
         }
         .toolbar {
@@ -413,28 +417,8 @@ private struct StoryDiaryCard: View {
         return formatter.string(from: entry.date)
     }
 
-    private var headline: String {
-        let lines = entry.text
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
-        return lines.first ?? "这一天的照片"
-    }
-
-    private var bodyText: String? {
-        let lines = entry.text
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .dropFirst()
-
-        let text = lines.joined(separator: "\n")
-        return text.isEmpty ? nil : text
-    }
-
-    private var photoText: String {
-        "\(entry.images.count) 张照片"
+    private var noteText: String {
+        entry.text.isEmpty ? "这一天的照片" : entry.text
     }
 
     var body: some View {
@@ -445,37 +429,27 @@ private struct StoryDiaryCard: View {
                         .resizable()
                         .scaledToFill()
                         .frame(maxWidth: .infinity)
-                        .aspectRatio(1.28, contentMode: .fit)
+                        .aspectRatio(1.52, contentMode: .fit)
                         .clipped()
                 }
             }
 
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 12) {
-                    Text(dateText)
-                    Text(photoText)
-                }
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color(.systemGray2))
-
-                Text(headline)
-                    .font(.system(size: 27, weight: .bold))
-                    .foregroundStyle(.black)
-                    .lineSpacing(5)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(noteText)
+                    .font(.system(size: 20, weight: .medium, design: .default))
+                    .foregroundStyle(.primary)
+                    .lineSpacing(6)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                if let bodyText {
-                    Text(bodyText)
-                        .font(.system(size: 21, weight: .semibold))
-                        .foregroundStyle(Color(.systemGray2))
-                        .lineSpacing(4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                Text(dateText)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color(.systemGray2))
             }
-            .padding(.horizontal, 2)
-            .padding(.top, 22)
+            .padding(.horizontal, 12)
+            .padding(.top, 18)
         }
-        .padding(20)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 18)
         .background(Color.white)
     }
 }
