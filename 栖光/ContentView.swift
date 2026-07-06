@@ -228,7 +228,7 @@ private struct StoryDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
+        ScrollView(showsIndicators: false) {
             VStack(spacing: 4) {
                 Text(title)
                     .font(.system(size: 38, weight: .regular))
@@ -264,6 +264,7 @@ private struct StoryDetailView: View {
                 }
             }
         }
+        .toolbar(.hidden, for: .tabBar)
         .sheet(isPresented: $isShowingNewEntry) {
             NewDiaryEntrySheet { entry in
                 entries.insert(entry, at: 0)
