@@ -406,42 +406,76 @@ private struct StoryDiaryCard: View {
     let entry: StoryDiaryEntry
 
     private var dateText: String {
-        entry.date.formatted(.dateTime.year().month().day())
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "yyyy年M月d日"
+        return formatter.string(from: entry.date)
+    }
+
+    private var headline: String {
+        let lines = entry.text
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        return lines.first ?? "这一天的照片"
+    }
+
+    private var bodyText: String? {
+        let lines = entry.text
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .dropFirst()
+
+        let text = lines.joined(separator: "\n")
+        return text.isEmpty ? nil : text
+    }
+
+    private var photoText: String {
+        "\(entry.images.count) 张照片"
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(dateText)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.secondary)
-
+        VStack(alignment: .leading, spacing: 0) {
             if !entry.images.isEmpty {
                 if let firstImage = entry.images.first {
                     Image(uiImage: firstImage)
                         .resizable()
                         .scaledToFill()
                         .frame(maxWidth: .infinity)
-                        .frame(height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .aspectRatio(1.28, contentMode: .fit)
                         .clipped()
                 }
+            }
 
-                if entry.images.count > 1 {
-                    Text("\(entry.images.count) 张照片")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(spacing: 12) {
+                    Text(dateText)
+                    Text(photoText)
+                }
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color(.systemGray2))
+
+                Text(headline)
+                    .font(.system(size: 27, weight: .bold))
+                    .foregroundStyle(.black)
+                    .lineSpacing(5)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let bodyText {
+                    Text(bodyText)
+                        .font(.system(size: 21, weight: .semibold))
+                        .foregroundStyle(Color(.systemGray2))
+                        .lineSpacing(4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-
-            if !entry.text.isEmpty {
-                Text(entry.text)
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            .padding(.horizontal, 2)
+            .padding(.top, 22)
         }
-        .padding(16)
-        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(20)
+        .background(Color.white)
     }
 }
 
