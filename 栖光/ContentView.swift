@@ -431,7 +431,7 @@ private struct StoryDiaryCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 18) {
             if !entry.images.isEmpty {
                 StoryDiaryPhotoLayout(images: entry.images)
                     .frame(maxWidth: .infinity)
@@ -448,8 +448,7 @@ private struct StoryDiaryCard: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color(.systemGray3))
             }
-            .padding(.horizontal, 18)
-            .padding(.bottom, 4)
+            .padding(.bottom, 6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white)
