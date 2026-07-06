@@ -245,10 +245,15 @@ private struct StoryDetailView: View {
             .padding(.top, 24)
 
             if !entries.isEmpty {
-                Color(.systemGray6)
-                    .opacity(0.72)
-                    .frame(height: 8)
-                    .padding(.top, 24)
+                VStack(spacing: 0) {
+                    Color(.separator)
+                        .opacity(0.22)
+                        .frame(height: 0.5)
+
+                    Color(red: 0.985, green: 0.985, blue: 0.98)
+                        .frame(height: 12)
+                }
+                .padding(.top, 24)
 
                 LazyVStack(spacing: 22) {
                     ForEach(entries) { entry in
