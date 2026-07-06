@@ -433,10 +433,8 @@ private struct StoryDiaryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             if !entry.images.isEmpty {
-                if let firstImage = entry.images.first {
-                    StoryDiaryImage(image: firstImage)
-                        .frame(maxWidth: .infinity)
-                }
+                StoryDiaryPhotoLayout(images: entry.images)
+                    .frame(maxWidth: .infinity)
             }
 
             VStack(alignment: .leading, spacing: 9) {
@@ -458,18 +456,37 @@ private struct StoryDiaryCard: View {
     }
 }
 
+private struct StoryDiaryPhotoLayout: View {
+    let images: [UIImage]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let height = proxy.size.width * 0.625
+
+            if images.count == 1, let image = images.first {
+                StoryDiaryImage(image: image)
+                    .frame(width: proxy.size.width, height: height)
+            } else {
+                HStack(spacing: 0) {
+                    ForEach(Array(images.prefix(2).enumerated()), id: \.offset) { _, image in
+                        StoryDiaryImage(image: image)
+                            .frame(width: proxy.size.width / 2, height: height)
+                    }
+                }
+            }
+        }
+        .aspectRatio(1.6, contentMode: .fit)
+    }
+}
+
 private struct StoryDiaryImage: View {
     let image: UIImage
 
     var body: some View {
-        GeometryReader { proxy in
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: proxy.size.width, height: proxy.size.width * 0.625)
-                .clipped()
-        }
-        .aspectRatio(1.6, contentMode: .fit)
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFill()
+            .clipped()
     }
 }
 
