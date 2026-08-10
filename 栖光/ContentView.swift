@@ -46,42 +46,26 @@ struct ContentView: View {
 struct DotGridBackground: View {
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.97, green: 0.96, blue: 0.95),
-                    Color(red: 0.98, green: 0.94, blue: 0.94)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            RadialGradient(
-                colors: [
-                    Color(red: 0.92, green: 0.89, blue: 0.84).opacity(0.38),
-                    .clear
-                ],
-                center: .top,
-                startRadius: 0,
-                endRadius: 460
-            )
+            Color(red: 0.985, green: 0.985, blue: 0.975)
 
             Canvas { context, size in
-                let spacing: CGFloat = 20
-                let dotSize: CGFloat = 1.35
-                let cols = Int(size.width / spacing) + 1
-                let rows = Int(size.height / spacing) + 1
+                let spacing: CGFloat = 32
+                let dotSize: CGFloat = 4
+                let startY: CGFloat = 8
+                let cols = Int(size.width / spacing) + 2
+                let rows = Int(size.height / spacing) + 2
 
                 for col in 0..<cols {
                     for row in 0..<rows {
                         let rect = CGRect(
-                            x: CGFloat(col) * spacing,
-                            y: CGFloat(row) * spacing,
+                            x: CGFloat(col) * spacing - dotSize / 2,
+                            y: startY + CGFloat(row) * spacing - dotSize / 2,
                             width: dotSize,
                             height: dotSize
                         )
                         context.fill(
                             Path(ellipseIn: rect),
-                            with: .color(Color(red: 0.36, green: 0.34, blue: 0.34).opacity(0.10))
+                            with: .color(Color(red: 0.72, green: 0.72, blue: 0.70).opacity(0.34))
                         )
                     }
                 }
@@ -96,10 +80,7 @@ struct HomeView: View {
         .toneCard,
         .darkroom,
         .memoryCalendar,
-        .photoStitcher,
-        .videoEffect,
         .frameTemplates,
-        .checkInCamera,
         .yearAlbum
     ]
 
@@ -166,10 +147,7 @@ private enum HomeShortcut: Identifiable {
     case toneCard
     case darkroom
     case memoryCalendar
-    case photoStitcher
-    case videoEffect
     case frameTemplates
-    case checkInCamera
     case yearAlbum
 
     var id: String { title }
@@ -179,10 +157,7 @@ private enum HomeShortcut: Identifiable {
         case .toneCard: return "取色卡片"
         case .darkroom: return "底片灯箱"
         case .memoryCalendar: return "回忆日历"
-        case .photoStitcher: return "长图拼接"
-        case .videoEffect: return "视频滤镜"
         case .frameTemplates: return "相框模板"
-        case .checkInCamera: return "打卡相机"
         case .yearAlbum: return "年度相册"
         }
     }
@@ -192,10 +167,7 @@ private enum HomeShortcut: Identifiable {
         case .toneCard: return "paintpalette.fill"
         case .darkroom: return "film.stack"
         case .memoryCalendar: return "calendar"
-        case .photoStitcher: return "photo.on.rectangle.angled"
-        case .videoEffect: return "film"
         case .frameTemplates: return "photo.artframe"
-        case .checkInCamera: return "mappin.circle"
         case .yearAlbum: return "archivebox"
         }
     }
@@ -205,10 +177,7 @@ private enum HomeShortcut: Identifiable {
         case .toneCard: return Color(red: 0.52, green: 0.44, blue: 0.50)
         case .darkroom: return Color(red: 0.59, green: 0.42, blue: 0.38)
         case .memoryCalendar: return Color(red: 0.55, green: 0.50, blue: 0.36)
-        case .photoStitcher: return Color(red: 0.36, green: 0.48, blue: 0.55)
-        case .videoEffect: return Color(red: 0.47, green: 0.43, blue: 0.50)
         case .frameTemplates: return Color(red: 0.37, green: 0.50, blue: 0.42)
-        case .checkInCamera: return Color(red: 0.42, green: 0.43, blue: 0.43)
         case .yearAlbum: return Color(red: 0.58, green: 0.44, blue: 0.35)
         }
     }
@@ -222,14 +191,8 @@ private enum HomeShortcut: Identifiable {
             DarkroomLightboxView()
         case .memoryCalendar:
             TimeCapsuleView()
-        case .photoStitcher:
-            PhotoStitcherView()
-        case .videoEffect:
-            VideoEffectView()
         case .frameTemplates:
             LightSpectrumView()
-        case .checkInCamera:
-            WatermarkAddressView()
         case .yearAlbum:
             YearsOrganizerView()
         }
@@ -258,10 +221,6 @@ private struct HomeShortcutButton: View {
                     .minimumScaleFactor(0.86)
 
                 Spacer(minLength: 0)
-
-                Image(systemName: "chevron.forward")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.secondary.opacity(0.42))
             }
             .padding(.horizontal, 14)
             .frame(maxWidth: .infinity)
