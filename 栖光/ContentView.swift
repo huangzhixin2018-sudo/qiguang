@@ -75,8 +75,25 @@ struct DotGridBackground: View {
     }
 }
 
+struct HomeCategoryItem: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let iconName: String
+}
+
 struct HomeView: View {
+    @State private var selectedCategory: String = "发现"
+    
+    private let categories: [HomeCategoryItem] = [
+        HomeCategoryItem(id: "发现", title: "发现", iconName: "sparkles"),
+        HomeCategoryItem(id: "1", title: "单图", iconName: "square.fill"),
+        HomeCategoryItem(id: "2", title: "双图", iconName: "rectangle.split.2x1.fill"),
+        HomeCategoryItem(id: "3", title: "三图", iconName: "rectangle.split.3x1.fill"),
+        HomeCategoryItem(id: "4", title: "四图", iconName: "square.grid.2x2.fill")
+    ]
+
     private let shortcuts: [HomeShortcut] = [
+        .oceanPoster,
         .toneCard,
         .darkroom,
         .memoryCalendar,
@@ -91,7 +108,13 @@ struct HomeView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 0) {
-                        HStack {
+                        // 1. 顶部 Header (左侧 hello，右侧云朵按钮)
+                        HStack(alignment: .center) {
+                            Text("hello")
+                                .font(.system(size: 48, weight: .bold, design: .serif))
+                                .italic()
+                                .foregroundStyle(Color(red: 0.34, green: 0.30, blue: 0.30))
+
                             Spacer()
 
                             Button {
@@ -100,7 +123,7 @@ struct HomeView: View {
                                     .font(.system(size: 18, weight: .semibold))
                                     .symbolRenderingMode(.hierarchical)
                                     .foregroundStyle(Color.primary.opacity(0.72))
-                                    .frame(width: 48, height: 48)
+                                    .frame(width: 44, height: 44)
                                     .background(.ultraThinMaterial, in: Circle())
                                     .overlay {
                                         Circle()
@@ -111,29 +134,115 @@ struct HomeView: View {
                             .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 24)
-                        .padding(.top, 30)
+                        .padding(.top, 20)
 
-                        Text("hello")
-                            .font(.system(size: 54, weight: .bold, design: .serif))
-                            .italic()
-                            .foregroundStyle(Color(red: 0.34, green: 0.30, blue: 0.30))
-                            .padding(.leading, 24)
-                            .padding(.top, 34)
+                        // 2. 分类胶囊控制栏（图标+精致文案，暗墨色选中态）
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(categories) { item in
+                                    let isSelected = selectedCategory == item.id
+                                    Button {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                            selectedCategory = item.id
+                                        }
+                                    } label: {
+                                        HStack(spacing: 7) {
+                                            Image(systemName: item.iconName)
+                                                .font(.system(size: 12, weight: .semibold))
 
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: 14),
-                                GridItem(.flexible(), spacing: 14)
-                            ],
-                            alignment: .leading,
-                            spacing: 14
-                        ) {
-                            ForEach(shortcuts) { shortcut in
-                                HomeShortcutButton(shortcut: shortcut)
+                                            Text(item.title)
+                                                .font(.system(size: 14, weight: .bold, design: item.id == "发现" ? .serif : .default))
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            isSelected ? Color(red: 0.18, green: 0.18, blue: 0.20) : Color.white,
+                                            in: RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                        )
+                                        .foregroundStyle(
+                                            isSelected
+                                                ? Color.white
+                                                : Color(red: 0.30, green: 0.28, blue: 0.28)
+                                        )
+                                        .shadow(color: Color.black.opacity(isSelected ? 0.10 : 0.03), radius: 6, x: 0, y: 3)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                                .stroke(isSelected ? Color(red: 0.18, green: 0.18, blue: 0.20) : Color.black.opacity(0.05), lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 6)
                         }
-                        .padding(.horizontal, 22)
-                        .padding(.top, 44)
+                        .padding(.top, 16)
+
+                        // 3. 条件渲染：
+                        // “发现”：保持原本经典功能快捷网格
+                        // “1”：单图排版集（Summer Editorial 海洋光影、色块在上、杂志海报、玻璃色卡）
+                        // “2/3/4”：多图排版（预留待开发）
+                        if selectedCategory == "发现" {
+                            LazyVGrid(
+                                columns: [
+                                    GridItem(.flexible(), spacing: 14),
+                                    GridItem(.flexible(), spacing: 14)
+                                ],
+                                alignment: .leading,
+                                spacing: 14
+                            ) {
+                                ForEach(shortcuts) { shortcut in
+                                    HomeShortcutButton(shortcut: shortcut)
+                                }
+                            }
+                            .padding(.horizontal, 22)
+                            .padding(.top, 24)
+                        } else if selectedCategory == "1" {
+                            // 1 张照片排版模板集
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("单图画报集")
+                                    .font(.system(size: 22, weight: .bold, design: .serif))
+                                    .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.20))
+                                    .padding(.horizontal, 24)
+                                    .padding(.top, 20)
+
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 16) {
+                                        // 模板 1：海洋光影
+                                        NavigationLink {
+                                            OceanPosterDetailView(title: "海洋光影")
+                                        } label: {
+                                            summerHorizonTemplateCard
+                                        }
+                                        .buttonStyle(.plain)
+
+                                        // 模板 2：色块在上
+                                        NavigationLink {
+                                            OceanPosterDetailView(title: "色块在上")
+                                        } label: {
+                                            editorialTemplatePreviewCard(title: "色块在上", sub: "顶栏吸色", bgGradient: [Color(red: 0.92, green: 0.89, blue: 0.85), Color(red: 0.82, green: 0.78, blue: 0.75)], icon: "rectangle.topthird.inset.filled")
+                                        }
+                                        .buttonStyle(.plain)
+
+                                        // 模板 3：杂志海报
+                                        NavigationLink {
+                                            OceanPosterDetailView(title: "杂志海报")
+                                        } label: {
+                                            editorialTemplatePreviewCard(title: "杂志海报", sub: "杂志画框", bgGradient: [Color(red: 0.94, green: 0.92, blue: 0.88), Color(red: 0.85, green: 0.80, blue: 0.75)], icon: "rectangle.inset.filled")
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 4)
+                                }
+                            }
+                        } else {
+                            // 2, 3, 4：空白留白区
+                            VStack {
+                                Spacer(minLength: 120)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
                     }
                     .padding(.bottom, 120)
                 }
@@ -141,9 +250,77 @@ struct HomeView: View {
             .toolbar(.hidden, for: .navigationBar)
         }
     }
+
+    // 轻量极简微缩“海洋光影”卡片（纯中文标示）
+    private var summerHorizonTemplateCard: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                LinearGradient(
+                    colors: [Color(red: 0.98, green: 0.85, blue: 0.75), Color(red: 0.45, green: 0.75, blue: 0.80)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(width: 160, height: 170)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .padding(8)
+
+            VStack(spacing: 2) {
+                Text("2026.08.10")
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.black.opacity(0.4))
+                Text("海洋光影")
+                    .font(.system(size: 13, weight: .bold, design: .serif))
+                    .foregroundStyle(Color(red: 0.18, green: 0.18, blue: 0.22))
+                Text("日落海浪")
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundStyle(Color.black.opacity(0.35))
+            }
+            .padding(.bottom, 10)
+        }
+        .frame(width: 176)
+        .background(Color(red: 0.98, green: 0.97, blue: 0.96), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
+    }
+
+    // 轻量无重感模版预览卡片
+    private func editorialTemplatePreviewCard(title: String, sub: String, bgGradient: [Color], icon: String) -> some View {
+        VStack(spacing: 8) {
+            ZStack {
+                LinearGradient(colors: bgGradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .frame(width: 160, height: 170)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                Image(systemName: icon)
+                    .font(.system(size: 32))
+                    .foregroundStyle(Color.white.opacity(0.85))
+            }
+            .padding(8)
+
+            VStack(spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .bold, design: .serif))
+                    .foregroundStyle(Color.primary)
+                Text(sub)
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.secondary)
+            }
+            .padding(.bottom, 10)
+        }
+        .frame(width: 176)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
+    }
 }
 
 private enum HomeShortcut: Identifiable {
+    case oceanPoster
     case toneCard
     case darkroom
     case memoryCalendar
@@ -154,6 +331,7 @@ private enum HomeShortcut: Identifiable {
 
     var title: String {
         switch self {
+        case .oceanPoster: return "海洋光影"
         case .toneCard: return "取色卡片"
         case .darkroom: return "底片灯箱"
         case .memoryCalendar: return "回忆日历"
@@ -164,6 +342,7 @@ private enum HomeShortcut: Identifiable {
 
     var iconName: String {
         switch self {
+        case .oceanPoster: return "sun.horizon.fill"
         case .toneCard: return "paintpalette.fill"
         case .darkroom: return "film.stack"
         case .memoryCalendar: return "calendar"
@@ -174,6 +353,7 @@ private enum HomeShortcut: Identifiable {
 
     var color: Color {
         switch self {
+        case .oceanPoster: return Color(red: 0.20, green: 0.55, blue: 0.65)
         case .toneCard: return Color(red: 0.52, green: 0.44, blue: 0.50)
         case .darkroom: return Color(red: 0.59, green: 0.42, blue: 0.38)
         case .memoryCalendar: return Color(red: 0.55, green: 0.50, blue: 0.36)
@@ -185,6 +365,8 @@ private enum HomeShortcut: Identifiable {
     @ViewBuilder
     var destination: some View {
         switch self {
+        case .oceanPoster:
+            OceanPosterDetailView()
         case .toneCard:
             PhotoToneCardView()
         case .darkroom:
