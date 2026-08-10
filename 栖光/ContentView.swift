@@ -42,28 +42,32 @@ struct ContentView: View {
 }
 
 
-// MARK: - 🎨 艺术点阵网格背景 (Minimalist Editorial Dot Grid Canvas)
+// MARK: - 艺术点阵网格背景 (Minimalist Editorial Dot Grid Canvas)
 struct DotGridBackground: View {
     var body: some View {
         ZStack {
-            // 1. 清爽极简暖白纸张底色
-            Color(red: 0.98, green: 0.98, blue: 0.97)
+            LinearGradient(
+                colors: [
+                    Color(red: 0.97, green: 0.96, blue: 0.95),
+                    Color(red: 0.98, green: 0.94, blue: 0.94)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
-            // 2. 柔和晨光晕影 (Top Soft Radial Light Glow)
             RadialGradient(
                 colors: [
-                    Color(red: 0.94, green: 0.92, blue: 0.88).opacity(0.45),
+                    Color(red: 0.92, green: 0.89, blue: 0.84).opacity(0.38),
                     .clear
                 ],
                 center: .top,
                 startRadius: 0,
-                endRadius: 420
+                endRadius: 460
             )
 
-            // 3. 清楚透亮点阵 Pattern Canvas
             Canvas { context, size in
-                let spacing: CGFloat = 18
-                let dotSize: CGFloat = 2.2
+                let spacing: CGFloat = 20
+                let dotSize: CGFloat = 1.35
                 let cols = Int(size.width / spacing) + 1
                 let rows = Int(size.height / spacing) + 1
 
@@ -77,7 +81,7 @@ struct DotGridBackground: View {
                         )
                         context.fill(
                             Path(ellipseIn: rect),
-                            with: .color(Color(red: 0.35, green: 0.35, blue: 0.38).opacity(0.20))
+                            with: .color(Color(red: 0.36, green: 0.34, blue: 0.34).opacity(0.10))
                         )
                     }
                 }
@@ -95,7 +99,6 @@ struct HomeView: View {
         .photoStitcher,
         .videoEffect,
         .frameTemplates,
-        .sleepRecord,
         .checkInCamera,
         .yearAlbum
     ]
@@ -113,38 +116,43 @@ struct HomeView: View {
                             Button {
                             } label: {
                                 Image(systemName: "cloud.fill")
-                                    .font(.system(size: 22, weight: .semibold))
-                                    .foregroundStyle(Color(red: 0.23, green: 0.22, blue: 0.20))
-                                    .frame(width: 58, height: 58)
-                                    .background(Color.white.opacity(0.86), in: Circle())
-                                    .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .symbolRenderingMode(.hierarchical)
+                                    .foregroundStyle(Color.primary.opacity(0.72))
+                                    .frame(width: 48, height: 48)
+                                    .background(.ultraThinMaterial, in: Circle())
+                                    .overlay {
+                                        Circle()
+                                            .stroke(Color.white.opacity(0.65), lineWidth: 1)
+                                    }
+                                    .shadow(color: .black.opacity(0.04), radius: 12, x: 0, y: 6)
                             }
                             .buttonStyle(.plain)
                         }
-                        .padding(.horizontal, 30)
-                        .padding(.top, 54)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 30)
 
                         Text("hello")
-                            .font(.system(size: 58, weight: .bold, design: .serif))
+                            .font(.system(size: 54, weight: .bold, design: .serif))
                             .italic()
-                            .foregroundStyle(Color(red: 0.45, green: 0.37, blue: 0.43))
-                            .padding(.leading, 30)
-                            .padding(.top, 40)
+                            .foregroundStyle(Color(red: 0.34, green: 0.30, blue: 0.30))
+                            .padding(.leading, 24)
+                            .padding(.top, 34)
 
                         LazyVGrid(
                             columns: [
-                                GridItem(.flexible(), spacing: 16),
-                                GridItem(.flexible(), spacing: 16)
+                                GridItem(.flexible(), spacing: 14),
+                                GridItem(.flexible(), spacing: 14)
                             ],
                             alignment: .leading,
-                            spacing: 18
+                            spacing: 14
                         ) {
                             ForEach(shortcuts) { shortcut in
                                 HomeShortcutButton(shortcut: shortcut)
                             }
                         }
-                        .padding(.horizontal, 26)
-                        .padding(.top, 54)
+                        .padding(.horizontal, 22)
+                        .padding(.top, 44)
                     }
                     .padding(.bottom, 120)
                 }
@@ -161,7 +169,6 @@ private enum HomeShortcut: Identifiable {
     case photoStitcher
     case videoEffect
     case frameTemplates
-    case sleepRecord
     case checkInCamera
     case yearAlbum
 
@@ -175,7 +182,6 @@ private enum HomeShortcut: Identifiable {
         case .photoStitcher: return "长图拼接"
         case .videoEffect: return "视频滤镜"
         case .frameTemplates: return "相框模板"
-        case .sleepRecord: return "睡眠记录"
         case .checkInCamera: return "打卡相机"
         case .yearAlbum: return "年度相册"
         }
@@ -189,7 +195,6 @@ private enum HomeShortcut: Identifiable {
         case .photoStitcher: return "photo.on.rectangle.angled"
         case .videoEffect: return "film"
         case .frameTemplates: return "photo.artframe"
-        case .sleepRecord: return "video.fill"
         case .checkInCamera: return "mappin.circle"
         case .yearAlbum: return "archivebox"
         }
@@ -197,15 +202,14 @@ private enum HomeShortcut: Identifiable {
 
     var color: Color {
         switch self {
-        case .toneCard: return Color(red: 0.51, green: 0.43, blue: 0.50)
-        case .darkroom: return Color(red: 0.63, green: 0.30, blue: 0.29)
-        case .memoryCalendar: return Color(red: 0.64, green: 0.49, blue: 0.30)
-        case .photoStitcher: return Color(red: 0.34, green: 0.46, blue: 0.55)
-        case .videoEffect: return Color(red: 0.45, green: 0.35, blue: 0.29)
-        case .frameTemplates: return Color(red: 0.33, green: 0.49, blue: 0.38)
-        case .sleepRecord: return Color(red: 0.43, green: 0.39, blue: 0.52)
-        case .checkInCamera: return Color(red: 0.30, green: 0.32, blue: 0.35)
-        case .yearAlbum: return Color(red: 0.65, green: 0.40, blue: 0.25)
+        case .toneCard: return Color(red: 0.52, green: 0.44, blue: 0.50)
+        case .darkroom: return Color(red: 0.59, green: 0.42, blue: 0.38)
+        case .memoryCalendar: return Color(red: 0.55, green: 0.50, blue: 0.36)
+        case .photoStitcher: return Color(red: 0.36, green: 0.48, blue: 0.55)
+        case .videoEffect: return Color(red: 0.47, green: 0.43, blue: 0.50)
+        case .frameTemplates: return Color(red: 0.37, green: 0.50, blue: 0.42)
+        case .checkInCamera: return Color(red: 0.42, green: 0.43, blue: 0.43)
+        case .yearAlbum: return Color(red: 0.58, green: 0.44, blue: 0.35)
         }
     }
 
@@ -224,8 +228,6 @@ private enum HomeShortcut: Identifiable {
             VideoEffectView()
         case .frameTemplates:
             LightSpectrumView()
-        case .sleepRecord:
-            VHSSleepTimerView()
         case .checkInCamera:
             WatermarkAddressView()
         case .yearAlbum:
@@ -241,26 +243,35 @@ private struct HomeShortcutButton: View {
         NavigationLink {
             shortcut.destination
         } label: {
-            HStack(spacing: 14) {
-                Spacer(minLength: 0)
-
+            HStack(spacing: 12) {
                 Image(systemName: shortcut.iconName)
-                    .font(.system(size: 23, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 32)
+                    .font(.system(size: 18, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(shortcut.color)
+                    .frame(width: 36, height: 36)
+                    .background(shortcut.color.opacity(0.10), in: Circle())
 
                 Text(shortcut.title)
-                    .font(.system(size: 21, weight: .heavy))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.82))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                    .minimumScaleFactor(0.86)
 
                 Spacer(minLength: 0)
+
+                Image(systemName: "chevron.forward")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.secondary.opacity(0.42))
             }
+            .padding(.horizontal, 14)
             .frame(maxWidth: .infinity)
-            .frame(height: 62)
-            .background(shortcut.color, in: Capsule())
-            .shadow(color: shortcut.color.opacity(0.18), radius: 12, x: 0, y: 7)
+            .frame(height: 58)
+            .background(Color.white.opacity(0.74), in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(Color.white.opacity(0.72), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.04), radius: 12, x: 0, y: 6)
         }
         .buttonStyle(.plain)
     }
