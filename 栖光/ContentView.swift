@@ -6,106 +6,1127 @@
 //
 
 import SwiftUI
+import Combine
 import PhotosUI
 
 struct ContentView: View {
+    @State private var selectedTab = 0
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
                     Label("首页", systemImage: "house")
                 }
+                .tag(0)
 
             MemoriesView()
                 .tabItem {
                     Label("回忆", systemImage: "clock")
                 }
+                .tag(1)
 
             StoriesView()
                 .tabItem {
                     Label("故事", systemImage: "book.closed")
                 }
+                .tag(2)
 
             ProfileView()
                 .tabItem {
                     Label("我的", systemImage: "person.circle")
                 }
+                .tag(3)
         }
     }
 }
 
-private struct HomeView: View {
+
+// MARK: - 🎨 艺术点阵网格背景 (Minimalist Editorial Dot Grid Canvas)
+struct DotGridBackground: View {
     var body: some View {
-        NavigationStack {
-            Text("首页")
-                .foregroundStyle(.secondary)
-                .navigationTitle("首页")
+        ZStack {
+            // 1. 清爽极简暖白纸张底色
+            Color(red: 0.98, green: 0.98, blue: 0.97)
+
+            // 2. 柔和晨光晕影 (Top Soft Radial Light Glow)
+            RadialGradient(
+                colors: [
+                    Color(red: 0.94, green: 0.92, blue: 0.88).opacity(0.45),
+                    .clear
+                ],
+                center: .top,
+                startRadius: 0,
+                endRadius: 420
+            )
+
+            // 3. 清楚透亮点阵 Pattern Canvas
+            Canvas { context, size in
+                let spacing: CGFloat = 18
+                let dotSize: CGFloat = 2.2
+                let cols = Int(size.width / spacing) + 1
+                let rows = Int(size.height / spacing) + 1
+
+                for col in 0..<cols {
+                    for row in 0..<rows {
+                        let rect = CGRect(
+                            x: CGFloat(col) * spacing,
+                            y: CGFloat(row) * spacing,
+                            width: dotSize,
+                            height: dotSize
+                        )
+                        context.fill(
+                            Path(ellipseIn: rect),
+                            with: .color(Color(red: 0.35, green: 0.35, blue: 0.38).opacity(0.20))
+                        )
+                    }
+                }
+            }
         }
+        .ignoresSafeArea()
     }
 }
 
-private struct MemoriesView: View {
+struct HomeView: View {
+    private let shortcuts: [HomeShortcut] = [
+        .toneCard,
+        .darkroom,
+        .memoryCalendar,
+        .photoStitcher,
+        .videoEffect,
+        .frameTemplates,
+        .sleepRecord,
+        .checkInCamera,
+        .yearAlbum
+    ]
+
     var body: some View {
         NavigationStack {
-            Text("回忆")
-                .foregroundStyle(.secondary)
-                .navigationTitle("回忆")
-        }
-    }
-}
+            ZStack {
+                DotGridBackground()
 
-private struct StoriesView: View {
-    @State private var isShowingNewCollection = false
-    @State private var collectionTitle: String?
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack {
+                            Spacer()
 
-    var body: some View {
-        NavigationStack {
-            Group {
-                if let collectionTitle {
-                    StoryCollectionView(title: collectionTitle)
-                } else {
-                    VStack(spacing: 26) {
-                        StoryEmptyIcon()
-
-                        VStack(spacing: 10) {
-                            Text("创建你的第一个故事")
-                                .font(.system(size: 25, weight: .semibold))
-                                .foregroundStyle(.primary)
-
-                            Text("把照片串成一段时光")
-                                .font(.system(size: 19, weight: .regular))
-                                .foregroundStyle(.secondary)
+                            Button {
+                            } label: {
+                                Image(systemName: "cloud.fill")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundStyle(Color(red: 0.23, green: 0.22, blue: 0.20))
+                                    .frame(width: 58, height: 58)
+                                    .background(Color.white.opacity(0.86), in: Circle())
+                                    .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
+                            }
+                            .buttonStyle(.plain)
                         }
+                        .padding(.horizontal, 30)
+                        .padding(.top, 54)
+
+                        Text("hello")
+                            .font(.system(size: 58, weight: .bold, design: .serif))
+                            .italic()
+                            .foregroundStyle(Color(red: 0.45, green: 0.37, blue: 0.43))
+                            .padding(.leading, 30)
+                            .padding(.top, 40)
+
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible(), spacing: 16),
+                                GridItem(.flexible(), spacing: 16)
+                            ],
+                            alignment: .leading,
+                            spacing: 18
+                        ) {
+                            ForEach(shortcuts) { shortcut in
+                                HomeShortcutButton(shortcut: shortcut)
+                            }
+                        }
+                        .padding(.horizontal, 26)
+                        .padding(.top, 54)
+                    }
+                    .padding(.bottom, 120)
+                }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+}
+
+private enum HomeShortcut: Identifiable {
+    case toneCard
+    case darkroom
+    case memoryCalendar
+    case photoStitcher
+    case videoEffect
+    case frameTemplates
+    case sleepRecord
+    case checkInCamera
+    case yearAlbum
+
+    var id: String { title }
+
+    var title: String {
+        switch self {
+        case .toneCard: return "取色卡片"
+        case .darkroom: return "底片灯箱"
+        case .memoryCalendar: return "回忆日历"
+        case .photoStitcher: return "长图拼接"
+        case .videoEffect: return "视频滤镜"
+        case .frameTemplates: return "相框模板"
+        case .sleepRecord: return "睡眠记录"
+        case .checkInCamera: return "打卡相机"
+        case .yearAlbum: return "年度相册"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .toneCard: return "paintpalette.fill"
+        case .darkroom: return "film.stack"
+        case .memoryCalendar: return "calendar"
+        case .photoStitcher: return "photo.on.rectangle.angled"
+        case .videoEffect: return "film"
+        case .frameTemplates: return "photo.artframe"
+        case .sleepRecord: return "video.fill"
+        case .checkInCamera: return "mappin.circle"
+        case .yearAlbum: return "archivebox"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .toneCard: return Color(red: 0.51, green: 0.43, blue: 0.50)
+        case .darkroom: return Color(red: 0.63, green: 0.30, blue: 0.29)
+        case .memoryCalendar: return Color(red: 0.64, green: 0.49, blue: 0.30)
+        case .photoStitcher: return Color(red: 0.34, green: 0.46, blue: 0.55)
+        case .videoEffect: return Color(red: 0.45, green: 0.35, blue: 0.29)
+        case .frameTemplates: return Color(red: 0.33, green: 0.49, blue: 0.38)
+        case .sleepRecord: return Color(red: 0.43, green: 0.39, blue: 0.52)
+        case .checkInCamera: return Color(red: 0.30, green: 0.32, blue: 0.35)
+        case .yearAlbum: return Color(red: 0.65, green: 0.40, blue: 0.25)
+        }
+    }
+
+    @ViewBuilder
+    var destination: some View {
+        switch self {
+        case .toneCard:
+            PhotoToneCardView()
+        case .darkroom:
+            DarkroomLightboxView()
+        case .memoryCalendar:
+            TimeCapsuleView()
+        case .photoStitcher:
+            PhotoStitcherView()
+        case .videoEffect:
+            VideoEffectView()
+        case .frameTemplates:
+            LightSpectrumView()
+        case .sleepRecord:
+            VHSSleepTimerView()
+        case .checkInCamera:
+            WatermarkAddressView()
+        case .yearAlbum:
+            YearsOrganizerView()
+        }
+    }
+}
+
+private struct HomeShortcutButton: View {
+    let shortcut: HomeShortcut
+
+    var body: some View {
+        NavigationLink {
+            shortcut.destination
+        } label: {
+            HStack(spacing: 14) {
+                Spacer(minLength: 0)
+
+                Image(systemName: shortcut.iconName)
+                    .font(.system(size: 23, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 32)
+
+                Text(shortcut.title)
+                    .font(.system(size: 21, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 62)
+            .background(shortcut.color, in: Capsule())
+            .shadow(color: shortcut.color.opacity(0.18), radius: 12, x: 0, y: 7)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+
+enum MemoryCategory: String, CaseIterable, Identifiable, Codable {
+    case family = "家人"
+    case self_category = "自己"
+    case pet = "宠物"
+    case friend = "朋友"
+    case celebrity = "明星"
+    
+    var id: String { rawValue }
+    
+    var defaultIcon: String {
+        switch self {
+        case .family: return "heart.fill"
+        case .self_category: return "person.fill"
+        case .pet: return "pawprint.fill"
+        case .friend: return "figure.2.arms.open"
+        case .celebrity: return "star.fill"
+        }
+    }
+    
+    var defaultAccent: Color {
+        switch self {
+        case .family: return Color(red: 0.85, green: 0.35, blue: 0.35)
+        case .self_category: return Color(red: 0.35, green: 0.55, blue: 0.75)
+        case .pet: return Color(red: 0.90, green: 0.65, blue: 0.25)
+        case .friend: return Color(red: 0.45, green: 0.70, blue: 0.55)
+        case .celebrity: return Color(red: 0.65, green: 0.45, blue: 0.75)
+        }
+    }
+}
+
+struct PersonMemoryPoster: Identifiable, Codable {
+    var id = UUID()
+    let name: String            // 左侧艺术大字称呼（如 "妈妈"）
+    let cardTitle: String       // 右侧名片卡种名称（如 "陈晓静"、"王二蛋"、"豆豆"）
+    let tagline: String         // 简短标语（如 "陪伴的时光"）
+    var avatarImageData: Data? = nil // 自定义上传的真实头像图片
+    var coverImageData: Data? = nil  // 详情页单独封面图片
+    var videoFileName: String? = nil // 详情页追加的视频文件名
+    var category: MemoryCategory = .friend
+    let constellation: String   // 星座
+    let zodiac: String          // 生肖
+    let mbti: String            // MBTI
+    let solarDate: String       // 公历/生日
+    let lunarDate: String       // 农历
+}
+
+@MainActor
+class MemoryPosterManager: ObservableObject {
+    static let shared = MemoryPosterManager()
+    
+    @Published var posters: [PersonMemoryPoster] = []
+    
+    private let storageFileName = "memory_posters_v1.json"
+    
+    private var storageDirectory: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    }
+    
+    private var fileURL: URL {
+        storageDirectory.appendingPathComponent(storageFileName)
+    }
+    
+    init() {
+        loadPosters()
+    }
+    
+    func loadPosters() {
+        if let data = try? Data(contentsOf: fileURL) {
+            if let decoded = try? JSONDecoder().decode([PersonMemoryPoster].self, from: data) {
+                self.posters = decoded
+            }
+        }
+    }
+    
+    func savePosters() {
+        if let encoded = try? JSONEncoder().encode(posters) {
+            try? encoded.write(to: fileURL)
+        }
+    }
+    
+    func addPoster(_ poster: PersonMemoryPoster) {
+        posters.insert(poster, at: 0)
+        savePosters()
+    }
+    
+    func deletePoster(id: UUID) {
+        posters.removeAll { $0.id == id }
+        savePosters()
+    }
+
+    func updatePosterPhoto(id: UUID, imageData: Data) {
+        guard let index = posters.firstIndex(where: { $0.id == id }) else { return }
+        posters[index].avatarImageData = imageData
+        savePosters()
+    }
+
+    func updatePosterCover(id: UUID, imageData: Data) {
+        guard let index = posters.firstIndex(where: { $0.id == id }) else { return }
+        posters[index].coverImageData = imageData
+        savePosters()
+    }
+
+    func updatePosterVideo(id: UUID, fileName: String) {
+        guard let index = posters.firstIndex(where: { $0.id == id }) else { return }
+        posters[index].videoFileName = fileName
+        savePosters()
+    }
+}
+
+struct MemoriesView: View {
+    @StateObject private var manager = MemoryPosterManager.shared
+
+    // 莫兰迪低饱和度卡片软纸底色 (复刻最新截图：奶油暖米、淡雅松石青、暮色灰粉等)
+    private let morandiBgColors: [Color] = [
+        Color(red: 0.94, green: 0.92, blue: 0.88), // 奶油暖米
+        Color(red: 0.88, green: 0.92, blue: 0.90), // 淡雅松石青
+        Color(red: 0.92, green: 0.89, blue: 0.91), // 暮色灰粉
+        Color(red: 0.90, green: 0.91, blue: 0.93)  // 烟云蓝灰
+    ]
+
+    @State private var isShowingCreateSheet = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                // 1. 艺术点阵网格画板背景
+                DotGridBackground()
+
+                VStack(spacing: 0) {
+                    // 2. 顶部标题 + 右侧新建按键
+                    HStack(alignment: .center) {
+                        Text("生命里的光")
+                            .font(.system(size: 28, weight: .bold, design: .serif))
+                            .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.16))
+
+                        Spacer()
+
+                        Button {
+                            isShowingCreateSheet = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(Color(red: 0.25, green: 0.22, blue: 0.20))
+                                .frame(width: 40, height: 40)
+                                .background(Color.white.opacity(0.85), in: Circle())
+                                .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 14)
+                    .padding(.bottom, 12)
+
+                    if manager.posters.isEmpty {
+                        VStack(spacing: 16) {
+                            Spacer()
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 44, weight: .light))
+                                .foregroundStyle(Color(red: 0.65, green: 0.60, blue: 0.55))
+
+                            Text("还没有记录生命里的光")
+                                .font(.system(size: 16, weight: .medium, design: .serif))
+                                .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
+
+                            Button {
+                                isShowingCreateSheet = true
+                            } label: {
+                                Text("新建第一份画报")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(Color(red: 0.35, green: 0.30, blue: 0.28))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 8)
+
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        // 3. 双列莫兰迪圆窗肖像画报卡 (Morandi Circle Portrait Cards)
+                        ScrollView(showsIndicators: false) {
+                            LazyVGrid(
+                                columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
+                                spacing: 16
+                            ) {
+                                ForEach(Array(manager.posters.enumerated()), id: \.element.id) { index, poster in
+                                    let cardBg = morandiBgColors[index % morandiBgColors.count]
+                                    NavigationLink {
+                                        PersonMemoryDetailView(poster: poster) {
+                                            manager.deletePoster(id: poster.id)
+                                        }
+                                    } label: {
+                                        CirclePortraitCardView(poster: poster, cardBg: cardBg)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 8)
+                            .padding(.bottom, 40)
+                        }
+                    }
+                }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $isShowingCreateSheet) {
+                CreatePersonPosterSheet { newPoster in
+                    manager.addPoster(newPoster)
+                }
+            }
+        }
+    }
+}
+
+
+// MARK: - 1:1 复刻最新截图：莫兰迪圆窗肖像画报卡片 (Circle Portrait Card View)
+private struct CirclePortraitCardView: View {
+    let poster: PersonMemoryPoster
+    let cardBg: Color
+
+    var body: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(poster.category.defaultAccent.opacity(0.12))
+
+                if let data = poster.avatarImageData, let uiImage = UIImage(data: data) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: poster.category.defaultIcon)
+                        .font(.system(size: 42, weight: .semibold))
+                        .foregroundStyle(poster.category.defaultAccent)
+                }
+            }
+            .frame(width: 110, height: 110)
+            .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 3)
+            .padding(.top, 8)
+
+            VStack(spacing: 4) {
+                Text(poster.name)
+                    .font(.system(size: 22, weight: .bold, design: .serif))
+                    .foregroundStyle(Color(red: 0.18, green: 0.16, blue: 0.15))
+
+                Text(poster.tagline)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color(red: 0.50, green: 0.46, blue: 0.42))
+                    .lineLimit(1)
+            }
+            .padding(.bottom, 6)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 12)
+        .background(cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
+    }
+}
+
+private struct CreatePersonPosterSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var tagline = ""
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var selectedImageData: Data? = nil
+    @State private var selectedCategory: MemoryCategory = .friend
+
+    let onCreate: (PersonMemoryPoster) -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // 1. 照片选择/上传区 (PhotosPicker)
+                    VStack(spacing: 10) {
+                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color(red: 0.94, green: 0.92, blue: 0.88))
+                                    .frame(width: 100, height: 100)
+
+                                if let selectedImageData, let uiImage = UIImage(data: selectedImageData) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 100, height: 100)
+                                        .clipShape(Circle())
+                                } else {
+                                    VStack(spacing: 6) {
+                                        Image(systemName: selectedCategory.defaultIcon)
+                                            .font(.system(size: 28))
+                                            .foregroundStyle(selectedCategory.defaultAccent)
+                                    }
+                                }
+                            }
+                            .overlay(
+                                Circle()
+                                    .stroke(Color(red: 0.82, green: 0.78, blue: 0.72), lineWidth: 1.5)
+                            )
+                            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
+                        }
+                        .onChange(of: selectedPhotoItem) { _, newItem in
+                            Task {
+                                if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                                    selectedImageData = data
+                                }
+                            }
+                        }
+
+                        Text("点击上传人物照片")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color(red: 0.50, green: 0.46, blue: 0.42))
+                    }
+                    .padding(.top, 20)
+                    
+                    // 1.5 类别选择区 (横向胶囊)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("画报类别")
+                            .font(.system(size: 14, weight: .semibold, design: .serif))
+                            .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
+                            .padding(.horizontal, 24)
+                            
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(MemoryCategory.allCases) { category in
+                                    Button {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                            selectedCategory = category
+                                        }
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: category.defaultIcon)
+                                                .font(.system(size: 12, weight: .medium))
+                                            Text(category.rawValue)
+                                                .font(.system(size: 14, weight: .medium))
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            selectedCategory == category ? category.defaultAccent : Color(red: 0.95, green: 0.94, blue: 0.91)
+                                        )
+                                        .foregroundStyle(selectedCategory == category ? .white : Color(red: 0.45, green: 0.40, blue: 0.35))
+                                        .clipShape(Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, 24)
+                        }
+                    }
+
+                    // 2. 极简表单：名称与描述语句
+                    VStack(spacing: 20) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("名称")
+                                .font(.system(size: 14, weight: .semibold, design: .serif))
+                                .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
+
+                            TextField(selectedCategory == .celebrity ? "如：王一博" : "如：妈妈、陈晓静、豆豆", text: $name)
+                                .padding(.horizontal, 16)
+                                .frame(height: 50)
+                                .background(Color(red: 0.95, green: 0.94, blue: 0.91), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("描述语句")
+                                .font(.system(size: 14, weight: .semibold, design: .serif))
+                                .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
+
+                            TextField(selectedCategory == .celebrity ? "如：我最喜欢的一个人" : "如：陪伴的时光、相识第 520 天", text: $tagline)
+                                .padding(.horizontal, 16)
+                                .frame(height: 50)
+                                .background(Color(red: 0.95, green: 0.94, blue: 0.91), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+                .padding(.bottom, 40)
+            }
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 0.98, green: 0.97, blue: 0.95), Color(red: 0.95, green: 0.94, blue: 0.91)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
+            .navigationTitle("新建回忆画报")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                    .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") {
+                        let finalName = name.trimmingCharacters(in: .whitespaces).isEmpty ? "重要的人" : name
+	                        let newPoster = PersonMemoryPoster(
+	                            name: finalName,
+	                            cardTitle: finalName,
+	                            tagline: tagline.isEmpty ? (selectedCategory == .celebrity ? "我最喜欢的一个人" : "珍贵的回忆") : tagline,
+	                            avatarImageData: selectedImageData,
+	                            category: selectedCategory,
+	                            constellation: "回忆",
+	                            zodiac: "记忆",
+	                            mbti: "喜欢",
+	                            solarDate: "珍藏",
+	                            lunarDate: "时光"
+                        )
+                        onCreate(newPoster)
+                        dismiss()
+                    }
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color(red: 0.18, green: 0.16, blue: 0.15))
+                }
+            }
+        }
+    }
+}
+
+
+struct StoryDiaryEntry: Identifiable {
+    let id = UUID()
+    let date: Date
+    let text: String
+    let images: [UIImage]
+}
+
+
+/// 本地故事集与照片数据持久化管理器
+@MainActor
+struct StoryCollectionModel: Identifiable, Codable {
+    var id = UUID()
+    var title: String
+    var theme: String // "magazine", "darkroom", "polaroid", "gallery", "timeline"
+    var createdAt = Date()
+    var coverImageData: Data? = nil
+}
+
+final class StoryDataManager: ObservableObject {
+    static let shared = StoryDataManager()
+
+    @Published var collections: [StoryCollectionModel] = []
+    @Published var entries: [StoryDiaryEntry] = []
+
+    private let collectionsListKey = "saved_story_collections_list_v2"
+    private let oldCollectionsKey = "saved_story_collection_title"
+    private let oldThemeKey = "saved_story_collection_theme"
+    private let storiesDirName = "SavedStoryPhotos"
+    private let metadataFileName = "entries_metadata.json"
+
+    private struct PersistedEntry: Codable {
+        let id: String
+        let date: Date
+        let text: String
+        let imageFilenames: [String]
+    }
+
+    init() {
+        loadCollections()
+    }
+
+    private var storageDirectory: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(storiesDirName)
+    }
+
+    func addCollection(title: String, theme: String = "magazine", coverImage: UIImage? = nil) {
+        let imageData = coverImage?.jpegData(compressionQuality: 0.8)
+        let newColl = StoryCollectionModel(title: title, theme: theme, coverImageData: imageData)
+        self.collections.insert(newColl, at: 0)
+        persistCollections()
+    }
+
+    func deleteCollection(id: UUID) {
+        self.collections.removeAll { $0.id == id }
+        persistCollections()
+    }
+
+    func updateCollection(id: UUID, title: String, theme: String) {
+        if let idx = self.collections.firstIndex(where: { $0.id == id }) {
+            self.collections[idx].title = title
+            self.collections[idx].theme = theme
+            persistCollections()
+        }
+    }
+
+    /// 兼容旧调用的 saveCollection 方法
+    func saveCollection(title: String, theme: String = "magazine") {
+        if let first = collections.first {
+            updateCollection(id: first.id, title: title, theme: theme)
+        } else {
+            addCollection(title: title, theme: theme)
+        }
+    }
+
+    private func persistCollections() {
+        if let data = try? JSONEncoder().encode(collections) {
+            UserDefaults.standard.set(data, forKey: collectionsListKey)
+        }
+    }
+
+    func addEntry(_ entry: StoryDiaryEntry) {
+        self.entries.append(entry)
+        persistAllEntries()
+    }
+
+    private func persistAllEntries() {
+        let dir = storageDirectory
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+
+        var persistedList: [PersistedEntry] = []
+
+        for entry in entries {
+            var filenames: [String] = []
+            for (idx, img) in entry.images.enumerated() {
+                let filename = "photo_\(entry.id.uuidString)_\(idx).jpg"
+                let fileURL = dir.appendingPathComponent(filename)
+                if !FileManager.default.fileExists(atPath: fileURL.path) {
+                    if let data = img.jpegData(compressionQuality: 0.85) {
+                        try? data.write(to: fileURL)
+                    }
+                }
+                filenames.append(filename)
+            }
+            persistedList.append(PersistedEntry(
+                id: entry.id.uuidString,
+                date: entry.date,
+                text: entry.text,
+                imageFilenames: filenames
+            ))
+        }
+
+        let jsonURL = dir.appendingPathComponent(metadataFileName)
+        if let data = try? JSONEncoder().encode(persistedList) {
+            try? data.write(to: jsonURL)
+        }
+    }
+
+    private func loadCollections() {
+        if let data = UserDefaults.standard.data(forKey: collectionsListKey),
+           let list = try? JSONDecoder().decode([StoryCollectionModel].self, from: data) {
+            self.collections = list
+        } else if let oldTitle = UserDefaults.standard.string(forKey: oldCollectionsKey) {
+            let oldTheme = UserDefaults.standard.string(forKey: oldThemeKey) ?? "magazine"
+            let migrated = StoryCollectionModel(title: oldTitle, theme: oldTheme)
+            self.collections = [migrated]
+            persistCollections()
+        }
+    }
+
+    func clearAllDataAndCache() -> Double {
+        let cacheBytes = getStorageSizeInBytes()
+
+        UserDefaults.standard.removeObject(forKey: collectionsListKey)
+        UserDefaults.standard.removeObject(forKey: oldCollectionsKey)
+        UserDefaults.standard.removeObject(forKey: oldThemeKey)
+        self.collections = []
+        self.entries = []
+
+        let dir = storageDirectory
+        if FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.removeItem(at: dir)
+        }
+
+        URLCache.shared.removeAllCachedResponses()
+        let tmpDir = FileManager.default.temporaryDirectory
+        if let tmpFiles = try? FileManager.default.contentsOfDirectory(at: tmpDir, includingPropertiesForKeys: nil) {
+            for file in tmpFiles {
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
+
+        return Double(cacheBytes) / (1024.0 * 1024.0)
+    }
+
+    func getStorageSizeInBytes() -> Int64 {
+        var totalSize: Int64 = 0
+        let dir = storageDirectory
+        if let files = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.fileSizeKey]) {
+            for file in files {
+                if let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) {
+                    totalSize += Int64(size)
+                }
+            }
+        }
+
+        let tmpDir = FileManager.default.temporaryDirectory
+        if let tmpFiles = try? FileManager.default.contentsOfDirectory(at: tmpDir, includingPropertiesForKeys: [.fileSizeKey]) {
+            for file in tmpFiles {
+                if let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) {
+                    totalSize += Int64(size)
+                }
+            }
+        }
+
+        return max(totalSize, 0)
+    }
+}
+
+
+struct StoriesView: View {
+    @ObservedObject private var dataManager = StoryDataManager.shared
+    @State private var isShowingNewCollection = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                // 1. 艺术点阵网格画板背景（与「生命里的光」回忆首页统一）
+                DotGridBackground()
+
+                VStack(spacing: 0) {
+                    // 2. 顶部「故事」标题 + 右侧新建按键
+                    HStack(alignment: .center) {
+                        Text("故事")
+                            .font(.system(size: 28, weight: .bold, design: .serif))
+                            .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.16))
+
+                        Spacer()
 
                         Button {
                             isShowingNewCollection = true
                         } label: {
-                            Text("开始创作")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .frame(width: 168, height: 56)
-                                .background(Color(.systemGray6), in: Capsule())
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(Color(red: 0.25, green: 0.22, blue: 0.20))
+                                .frame(width: 40, height: 40)
+                                .background(Color.white.opacity(0.85), in: Circle())
+                                .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
                         }
                         .buttonStyle(.plain)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 14)
+                    .padding(.bottom, 0)
+
+                    if dataManager.collections.isEmpty {
+                        VStack(spacing: 16) {
+                            Spacer()
+                            Image(systemName: "book.closed")
+                                .font(.system(size: 44, weight: .light))
+                                .foregroundStyle(Color(red: 0.65, green: 0.60, blue: 0.55))
+
+                            Text("还没有记录故事")
+                                .font(.system(size: 16, weight: .medium, design: .serif))
+                                .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
+
+                            Text("把照片与时光，串成独一无二的纪念册")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundStyle(Color(red: 0.60, green: 0.56, blue: 0.52))
+
+                            Button {
+                                isShowingNewCollection = true
+                            } label: {
+                                Text("开始创作")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 22)
+                                    .padding(.vertical, 11)
+                                    .background(Color(red: 0.35, green: 0.30, blue: 0.28))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 8)
+
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        ScrollView(showsIndicators: false) {
+                            LazyVGrid(
+                                columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                                spacing: 12
+                            ) {
+                                ForEach(Array(dataManager.collections.enumerated()), id: \.element.id) { index, item in
+                                    StoryCollectionCardItem(collection: item, index: index)
+                                }
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.top, 4)
+                            .padding(.bottom, 30)
+                        }
+                    }
                 }
             }
+            .toolbar(.hidden, for: .navigationBar)
         }
         .sheet(isPresented: $isShowingNewCollection) {
-            NewCollectionSheet { title in
-                collectionTitle = title
+            NewCollectionSheet { title, theme, coverImg in
+                dataManager.addCollection(title: title, theme: theme, coverImage: coverImg)
+            }
+        }
+    }
+}
+private struct StoryCollectionCardItem: View {
+    let collection: StoryCollectionModel
+    var index: Int = 0
+    @ObservedObject private var dataManager = StoryDataManager.shared
+
+    private var coverImage: UIImage? {
+        if let data = collection.coverImageData, let img = UIImage(data: data) {
+            return img
+        }
+        return dataManager.entries.first?.images.first
+    }
+
+    var body: some View {
+        NavigationLink {
+            StoryDetailView(title: collection.title, theme: collection.theme)
+                .toolbar(.hidden, for: .tabBar)
+                .toolbarVisibility(.hidden, for: .tabBar)
+        } label: {
+            StackedEnvelopeFolderView(title: collection.title, theme: collection.theme, image: coverImage, index: index)
+                .frame(height: 205)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(role: .destructive) {
+                dataManager.deleteCollection(id: collection.id)
+            } label: {
+                Label("删除故事集", systemImage: "trash")
             }
         }
     }
 }
 
+// MARK: - 🎨 1:1 还原参考截图：立体收纳套/层叠信封与年鉴票根视图
+private struct StackedEnvelopeFolderView: View {
+    let title: String
+    let theme: String
+    let image: UIImage?
+    let index: Int
+
+    // 编辑部精选调和套色 (Unfold 美学：统一明度与低饱和低纯度，多卡片组合时极其和谐柔和)
+    private let pocketColors: [Color] = [
+        Color(red: 0.44, green: 0.52, blue: 0.58), // 暮霭雅灰蓝 (Muted Slate Blue)
+        Color(red: 0.76, green: 0.56, blue: 0.52), // 复古陶土肉粉 (Warm Clay Rose)
+        Color(red: 0.48, green: 0.55, blue: 0.48), // 鼠尾草灰绿 (Sage Olive Green)
+        Color(red: 0.68, green: 0.58, blue: 0.52), // 燕麦暖驼棕 (Oatmeal Soft Taupe)
+        Color(red: 0.56, green: 0.52, blue: 0.60), // 烟熏莫兰迪紫 (Smoky Heather Lavender)
+        Color(red: 0.46, green: 0.56, blue: 0.56)  // 沉静海盐冷绿 (Quiet Seafoam Green)
+    ]
+    private let singleCardColor = Color(red: 0.96, green: 0.95, blue: 0.93)
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            // 1. 抽出部分：直接展示完整的封面照片
+            VStack(spacing: 0) {
+                Group {
+                    if let image = image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 135)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    } else {
+                        // 无照片时的高高级米白色全幅卡片
+                        ZStack {
+                            singleCardColor
+                            VStack(spacing: 6) {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                    .font(.system(size: 22, weight: .light))
+                                    .foregroundStyle(Color.black.opacity(0.35))
+                                Text("栖光 · 故事集")
+                                    .font(.system(size: 11, weight: .bold, design: .serif))
+                                    .foregroundStyle(Color.black.opacity(0.45))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 135)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+                .padding(.horizontal, 6)
+                .offset(y: 10)
+
+                Spacer()
+            }
+            .padding(.top, 6)
+
+            // 2. 正面经典 U 型圆弧弧口口袋 + 嵌入白色高质感标题
+            ZStack(alignment: .center) {
+                EnvelopePocketShape()
+                    .fill(pocketColors[index % pocketColors.count])
+                    .shadow(color: Color.black.opacity(0.10), radius: 6, x: 0, y: -2)
+
+                // 嵌入在口袋纯正中央的中文优雅主标题 (18pt 粗衬线体)
+                Text(title)
+                    .font(.system(size: 18, weight: .bold, design: .serif))
+                    .foregroundStyle(Color.white.opacity(0.95))
+                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 14)
+                    .offset(y: 6)
+            }
+            .frame(height: 78)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+// 正面带 U 型凹口的信封口袋 Shape
+private struct EnvelopePocketShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let cutoutWidth: CGFloat = 48
+        let cutoutDepth: CGFloat = 22
+        let midX = rect.midX
+
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+
+        // 左上角平滑切到 U 型凹口
+        path.addLine(to: CGPoint(x: midX - cutoutWidth / 2, y: rect.minY))
+
+        // U 型圆弧凹口
+        path.addCurve(
+            to: CGPoint(x: midX + cutoutWidth / 2, y: rect.minY),
+            control1: CGPoint(x: midX - cutoutWidth / 4, y: rect.minY + cutoutDepth),
+            control2: CGPoint(x: midX + cutoutWidth / 4, y: rect.minY + cutoutDepth)
+        )
+
+        // 凹口右侧延伸到右上角
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+
+        path.closeSubpath()
+        return path
+    }
+}
+// 支持 5 大主题选择及封面图片上传的新建故事集弹窗
 private struct NewCollectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var collectionName = ""
+    @State private var selectedThemeIndex = 0
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var selectedCoverImage: UIImage? = nil
     @FocusState private var isNameFocused: Bool
-    let onCreate: (String) -> Void
+    let onCreate: (String, String, UIImage?) -> Void
+
+    private let themes: [(id: String, name: String, icon: String, desc: String)] = [
+        ("magazine", "杂志画报", "book.fill", "顶部画报轮播 · 贴边日记流"),
+        ("darkroom", "暗房胶片", "camera.aperture", "朱红波普顶栏 · 暗房底片阵"),
+        ("polaroid", "宝丽来", "photo.on.rectangle", "经典白框相纸 · 复古倾斜感"),
+        ("gallery", "极简画廊", "square.grid.2x2.fill", "双列瀑布流 · 展厅白空间"),
+        ("timeline", "时光轴", "clock.arrow.circlepath", "时间节点线 · 时光河流感"),
+        ("book", "书籍相册", "book.closed", "拟真翻页动效 · 纸质相册感")
+    ]
 
     private var trimmedName: String {
         collectionName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -119,17 +1140,17 @@ private struct NewCollectionSheet: View {
                 .padding(.top, 14)
 
             ZStack {
-                Text("新收藏集")
-                    .font(.system(size: 22, weight: .semibold))
+                Text("新故事集")
+                    .font(.system(size: 20, weight: .semibold))
 
                 HStack {
                     Button {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 24, weight: .regular))
+                            .font(.system(size: 20, weight: .regular))
                             .foregroundStyle(.primary)
-                            .frame(width: 58, height: 58)
+                            .frame(width: 44, height: 44)
                             .background(Color(.systemGray6), in: Circle())
                     }
                     .buttonStyle(.plain)
@@ -137,40 +1158,141 @@ private struct NewCollectionSheet: View {
                     Spacer()
                 }
             }
-            .padding(.horizontal, 28)
-            .padding(.top, 20)
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
 
-            TextField("收藏集名称", text: $collectionName)
-                .font(.system(size: 42, weight: .regular))
-                .foregroundStyle(.primary)
-                .tint(.primary)
-                .multilineTextAlignment(.center)
-                .focused($isNameFocused)
-                .padding(.horizontal, 34)
-                .frame(maxWidth: .infinity)
-                .frame(height: 260)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("故事集名称")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.secondary)
 
-            Button {
-                guard !trimmedName.isEmpty else { return }
-                onCreate(trimmedName)
-                dismiss()
-            } label: {
-                Text("创建收藏集")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 64)
-                    .background(trimmedName.isEmpty ? Color(.systemGray4) : .primary, in: Capsule())
+                        TextField("例如：长白山滑雪之旅", text: $collectionName)
+                            .font(.system(size: 22, weight: .semibold))
+                            .padding(.horizontal, 16)
+                            .frame(height: 54)
+                            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .focused($isNameFocused)
+                    }
+
+                    // 上传封面照片区块
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("封面照片 (可选)")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.secondary)
+
+                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                            HStack(spacing: 14) {
+                                if let img = selectedCoverImage {
+                                    Image(uiImage: img)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 50, height: 50)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("已选择封面图片")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundStyle(.primary)
+                                        Text("点击重新挑选或更换照片")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                } else {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(Color(.systemGray5))
+                                            .frame(width: 50, height: 50)
+
+                                        Image(systemName: "photo.badge.plus")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(Color.primary)
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("上传封面照片")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundStyle(.primary)
+                                        Text("照片将精美抽取呈现在信封封面上")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Color(.tertiaryLabel))
+                            }
+                            .padding(12)
+                            .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .onChange(of: selectedPhotoItem) { _, newItem in
+                            Task {
+                                if let data = try? await newItem?.loadTransferable(type: Data.self),
+                                   let img = UIImage(data: data) {
+                                    await MainActor.run {
+                                        self.selectedCoverImage = img
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("选择详情页主题")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.secondary)
+
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                            ForEach(0..<themes.count, id: \.self) { idx in
+                                let t = themes[idx]
+                                let isSelected = selectedThemeIndex == idx
+                                Button {
+                                    selectedThemeIndex = idx
+                                } label: {
+                                    Text(t.name)
+                                        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+                                        .foregroundStyle(isSelected ? Color.white : Color.primary)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(
+                                            isSelected
+                                            ? Color.primary
+                                            : Color(.systemGray6),
+                                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    Button {
+                        guard !trimmedName.isEmpty else { return }
+                        onCreate(trimmedName, themes[selectedThemeIndex].id, selectedCoverImage)
+                        dismiss()
+                    } label: {
+                        Text("创建故事集")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(trimmedName.isEmpty ? Color(.systemGray4) : Color.primary, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(trimmedName.isEmpty)
+                    .padding(.top, 4)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 24)
             }
-            .buttonStyle(.plain)
-            .disabled(trimmedName.isEmpty)
-            .padding(.horizontal, 32)
-            .padding(.top, 26)
-
-            Spacer(minLength: 0)
         }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.hidden)
+        .presentationDetents([.fraction(0.7), .large])
         .presentationCornerRadius(36)
         .onAppear {
             isNameFocused = true
@@ -178,92 +1300,291 @@ private struct NewCollectionSheet: View {
     }
 }
 
-private struct StoryCollectionView: View {
-    let title: String
 
-    var body: some View {
-        ScrollView {
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 150), spacing: 18)],
-                spacing: 24
-            ) {
-                NavigationLink {
-                    StoryDetailView(title: title)
-                } label: {
-                    VStack(alignment: .leading, spacing: 10) {
-                        StoryCoverView()
-                            .aspectRatio(1, contentMode: .fit)
-
-                        Text(title)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(2)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 22)
-            .padding(.top, 28)
-            .padding(.bottom, 24)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-private struct StoryCoverView: View {
-    var body: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .fill(Color(.systemGray6))
-    }
-}
-
-private struct StoryDetailView: View {
-    let title: String
-    @State private var isShowingNewEntry = false
-    @State private var entries: [StoryDiaryEntry] = []
-
-    private var photoCount: Int {
-        entries.reduce(0) { $0 + $1.images.count }
-    }
+// MARK: - 独立年度照片整理页：YearsOrganizerView (静态美学样板)
+struct YearsOrganizerView: View {
+    private let sampleYears: [(year: String, count: Int, style: VHSTapeCard.VHSStyle)] = [
+        ("2025", 384, .cream),
+        ("2024", 1020, .red),
+        ("2023", 640, .navy)
+    ]
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 4) {
-                Text(title)
-                    .font(.system(size: 38, weight: .regular))
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
+            VStack(alignment: .leading, spacing: 20) {
+                // 简洁双列年度画报封面网格 (取消多余副标题与繁杂标语)
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
+                    spacing: 22
+                ) {
+                    ForEach(sampleYears, id: \.year) { item in
+                        NavigationLink {
+                            YearDetailView(year: item.year, count: item.count)
+                                .hideTabBarOnRealDevice()
+                        } label: {
+                            VStack(alignment: .leading, spacing: 10) {
+                                VHSTapeCard(
+                                    year: item.year,
+                                    style: item.style
+                                )
 
-                Text("2026年  \(photoCount)  张照片")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.horizontal, 24)
-            .padding(.top, 24)
-
-            if !entries.isEmpty {
-                VStack(spacing: 0) {
-                    Color(.separator)
-                        .opacity(0.22)
-                        .frame(height: 0.5)
-
-                    Color(red: 0.985, green: 0.985, blue: 0.98)
-                        .frame(height: 12)
-                }
-                .padding(.top, 24)
-
-                LazyVStack(spacing: 22) {
-                    ForEach(entries) { entry in
-                        StoryDiaryCard(entry: entry)
+                                HStack(spacing: 5) {
+                                    Image(systemName: "photo.stack.fill")
+                                        .font(.system(size: 11))
+                                    Text("\(item.count) 张精彩记忆")
+                                        .font(.system(size: 13, weight: .semibold, design: .serif))
+                                }
+                                .foregroundStyle(Color(red: 0.35, green: 0.32, blue: 0.30))
+                                .padding(.leading, 4)
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 16)
-                .padding(.top, 18)
-                .padding(.bottom, 32)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+            }
+            .padding(.bottom, 40)
+        }
+        .navigationTitle("年度相册")
+        .navigationBarTitleDisplayMode(.inline)
+        .background(
+            LinearGradient(
+                colors: [Color(red: 0.98, green: 0.97, blue: 0.95), Color(red: 0.95, green: 0.94, blue: 0.91)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
+    }
+}
+
+// MARK: - 某一年份的照片记忆放映机：YearDetailView
+private struct YearDetailView: View {
+    let year: String
+    let count: Int
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // 录像带播放信息框
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 8, height: 8)
+                            Text("PLAY ▶ \(year) REEL")
+                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                .foregroundStyle(.white)
+                        }
+
+                        Text("YEAR OF \(year)")
+                            .font(.system(size: 28, weight: .black, design: .serif))
+                            .foregroundStyle(.white)
+
+                        Text("共记录 \(count) 个回忆瞬间 · 慢速倒带中")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    .padding(.top, 20)
+
+                    VStack(spacing: 16) {
+                        ForEach(1...4, id: \.self) { idx in
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.white.opacity(0.08))
+                                .frame(height: 200)
+                                .overlay(
+                                    VStack(spacing: 8) {
+                                        Image(systemName: "play.rectangle.fill")
+                                            .font(.system(size: 36))
+                                            .foregroundStyle(Color(red: 0.98, green: 0.82, blue: 0.10))
+                                        Text("\(year) 年第 \(idx) 季度影像回忆录")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(.white.opacity(0.8))
+                                    }
+                                )
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+                .padding(.bottom, 40)
+            }
+        }
+        .navigationTitle("\(year) 相册回放")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - 编辑部极简年度归档封面卡片 (Editorial Year Archive Cover Card)
+private struct VHSTapeCard: View {
+    let year: String
+    let style: VHSStyle
+
+    enum VHSStyle {
+        case cream
+        case red
+        case navy
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            switch style {
+            case .cream:
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("ANNUAL ARCHIVE")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(red: 0.55, green: 0.50, blue: 0.45))
+                            .tracking(2)
+                        Spacer()
+                        Circle()
+                            .fill(Color(red: 0.85, green: 0.45, blue: 0.25))
+                            .frame(width: 6, height: 6)
+                    }
+
+                    Spacer()
+
+                    Text(year)
+                        .font(.system(size: 38, weight: .bold, design: .serif))
+                        .foregroundStyle(Color(red: 0.18, green: 0.16, blue: 0.15))
+
+                    Spacer()
+
+                    HStack {
+                        Text("COLLECTION")
+                            .font(.system(size: 8, weight: .bold, design: .serif))
+                            .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Color(red: 0.55, green: 0.50, blue: 0.45))
+                    }
+                }
+                .padding(16)
+                .frame(height: 180)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(red: 0.96, green: 0.95, blue: 0.91))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                )
+
+            case .red:
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("MEMORIES")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.75))
+                            .tracking(2)
+                        Spacer()
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 6, height: 6)
+                    }
+
+                    Spacer()
+
+                    Text(year)
+                        .font(.system(size: 38, weight: .bold, design: .serif))
+                        .foregroundStyle(.white)
+
+                    Spacer()
+
+                    HStack {
+                        Text("VOL. \(year.suffix(2))")
+                            .font(.system(size: 8, weight: .bold, design: .serif))
+                            .foregroundStyle(.white.opacity(0.85))
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                }
+                .padding(16)
+                .frame(height: 180)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(red: 0.72, green: 0.28, blue: 0.22))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+            case .navy:
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("CHRONICLE")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.75))
+                            .tracking(2)
+                        Spacer()
+                        Circle()
+                            .fill(Color(red: 0.95, green: 0.75, blue: 0.35))
+                            .frame(width: 6, height: 6)
+                    }
+
+                    Spacer()
+
+                    Text(year)
+                        .font(.system(size: 38, weight: .bold, design: .serif))
+                        .foregroundStyle(.white)
+
+                    Spacer()
+
+                    HStack {
+                        Text("LOOKBACK")
+                            .font(.system(size: 8, weight: .bold, design: .serif))
+                            .foregroundStyle(.white.opacity(0.85))
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                }
+                .padding(16)
+                .frame(height: 180)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(red: 0.20, green: 0.24, blue: 0.30))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+        }
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
+    }
+}
+
+
+// MARK: - 支持 4 大主题切换与样板试看的主故事详情页
+struct StoryDetailView: View {
+    let title: String
+    @State var theme: String
+    @ObservedObject private var dataManager = StoryDataManager.shared
+    @State private var isShowingNewEntry = false
+
+    private var allPhotos: [UIImage] {
+        dataManager.entries.flatMap { $0.images }
+    }
+
+    private var formattedDateString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy . MM . dd"
+        return formatter.string(from: Date())
+    }
+
+    var body: some View {
+        Group {
+            switch theme {
+            case "darkroom":
+                StoryDetailDarkroomView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
+            case "polaroid":
+                StoryDetailPolaroidView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
+            case "gallery":
+                StoryDetailGalleryView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
+            case "timeline":
+                StoryDetailTimelineView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
+            case "book":
+                StoryDetailBookView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
+            default: // magazine
+                StoryDetailMagazineView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
             }
         }
         .toolbar {
@@ -271,33 +1592,567 @@ private struct StoryDetailView: View {
                 Button {
                     isShowingNewEntry = true
                 } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(.primary)
+                    HStack(spacing: 5) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("记录")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(theme == "darkroom" ? Color.white.opacity(0.2) : Color.primary.opacity(0.08), in: Capsule())
+                    .foregroundStyle(theme == "darkroom" ? .white : .primary)
                 }
+                .buttonStyle(.plain)
             }
         }
-        .toolbar(.hidden, for: .tabBar)
+        .overlay(alignment: .bottom) {
+            Button {
+                isShowingNewEntry = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("添加故事")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundStyle(theme == "darkroom" ? Color.black : Color.white)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 12)
+                .background(
+                    theme == "darkroom"
+                    ? Color.white
+                    : Color.primary,
+                    in: Capsule()
+                )
+                .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, 24)
+        }
         .sheet(isPresented: $isShowingNewEntry) {
             NewDiaryEntrySheet { entry in
-                entries.insert(entry, at: 0)
+                dataManager.addEntry(entry)
             }
         }
     }
 }
 
-private struct StoryDiaryEntry: Identifiable {
-    let id = UUID()
-    let date: Date
-    let text: String
-    let images: [UIImage]
+
+// MARK: - 主题 1：📖 杂志画报风 (Magazine Editorial) - 原详情页设计
+private struct StoryDetailMagazineView: View {
+    let title: String
+    let dateString: String
+    let photos: [UIImage]
+    let entries: [StoryDiaryEntry]
+
+    @State private var carouselIndex = 0
+    private let timer = Timer.publish(every: 3.0, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                // 1. 顶部轮播画报 (有真实照片用照片，无照片显示精美浅色样板)
+                ZStack {
+                    if !photos.isEmpty {
+                        ForEach(photos.indices, id: \.self) { index in
+                            if index == carouselIndex {
+                                Image(uiImage: photos[index])
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 280)
+                                    .clipped()
+                                    .transition(.opacity)
+                            }
+                        }
+                    } else {
+                        // 浅色照片样板占位
+                        ZStack {
+                            LinearGradient(colors: [Color(red: 0.92, green: 0.94, blue: 0.96), Color(red: 0.85, green: 0.88, blue: 0.92)], startPoint: .topLeading, endPoint: .bottomTrailing)
+
+                            VStack(spacing: 6) {
+                                Image(systemName: "magazine.fill")
+                                    .font(.system(size: 36))
+                                    .foregroundStyle(.secondary)
+                                Text("「杂志画报」样板轮播图")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 280)
+                    }
+                }
+                .frame(height: 280)
+                .onReceive(timer) { _ in
+                    if !photos.isEmpty {
+                        withAnimation(.easeInOut(duration: 1.2)) {
+                            carouselIndex = (carouselIndex + 1) % photos.count
+                        }
+                    }
+                }
+
+                // 2. 居中标题与时间 Header
+                VStack(alignment: .center, spacing: 8) {
+                    Text(title)
+                        .font(.system(size: 26, weight: .bold, design: .serif))
+                        .foregroundStyle(.primary)
+
+                    Text(dateString)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 24)
+                .padding(.bottom, 20)
+
+                // 3. 故事流 (有真实数据用真实数据，无数据展示样板卡片)
+                if !entries.isEmpty {
+                    LazyVStack(spacing: 28) {
+                        ForEach(entries) { entry in
+                            VStack(alignment: .leading, spacing: 0) {
+                                ForEach(entry.images.indices, id: \.self) { imgIdx in
+                                    Image(uiImage: entry.images[imgIdx])
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 300)
+                                        .clipped()
+                                }
+
+                                if !entry.text.isEmpty {
+                                    Text(entry.text)
+                                        .font(.system(size: 15, weight: .regular))
+                                        .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
+                                        .lineSpacing(6)
+                                        .padding(20)
+                                        .background(Color(red: 0.98, green: 0.96, blue: 0.89))
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                        }
+                    }
+                    .padding(.bottom, 40)
+                } else {
+                    // 浅色样板日记流展示
+                    VStack(spacing: 24) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            RoundedRectangle(cornerRadius: 0)
+                                .fill(Color(red: 0.90, green: 0.92, blue: 0.95))
+                                .frame(height: 240)
+                                .overlay(
+                                    VStack(spacing: 6) {
+                                        Image(systemName: "photo")
+                                            .font(.system(size: 28))
+                                        Text("浅色高清照片结构样板 01")
+                                            .font(.system(size: 13))
+                                    }
+                                    .foregroundStyle(.secondary)
+                                )
+
+                            Text("在清晨的光影里漫步，空气里透着清甜的温度。记录下这一刻的静谧与温柔。")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
+                                .lineSpacing(6)
+                                .padding(20)
+                                .background(Color(red: 0.98, green: 0.96, blue: 0.89))
+                        }
+                        .padding(.horizontal, 16)
+
+                        VStack(alignment: .leading, spacing: 0) {
+                            RoundedRectangle(cornerRadius: 0)
+                                .fill(Color(red: 0.93, green: 0.90, blue: 0.92))
+                                .frame(height: 240)
+                                .overlay(
+                                    VStack(spacing: 6) {
+                                        Image(systemName: "photo")
+                                            .font(.system(size: 28))
+                                        Text("浅色高清照片结构样板 02")
+                                            .font(.system(size: 13))
+                                    }
+                                    .foregroundStyle(.secondary)
+                                )
+
+                            Text("傍晚时分的海边，夕阳把云朵染成了温暖的烧陶橘。生活中的闪光时刻。")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
+                                .lineSpacing(6)
+                                .padding(20)
+                                .background(Color(red: 0.98, green: 0.96, blue: 0.89))
+                        }
+                        .padding(.horizontal, 16)
+                    }
+                    .padding(.bottom, 40)
+                }
+            }
+            .padding(.top, 50)
+        }
+        .background(Color(.systemBackground))
+    }
+}
+
+// MARK: - 主题 2：🎞️ 宝丽来拍立得风 (Polaroid Vintage)
+private struct StoryDetailPolaroidView: View {
+    let title: String
+    let dateString: String
+    let photos: [UIImage]
+    let entries: [StoryDiaryEntry]
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 24) {
+                // 复古宝丽来 Header
+                VStack(spacing: 6) {
+                    Text("MEMORIES · POLAROID")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color(red: 0.70, green: 0.50, blue: 0.35))
+                        .tracking(2)
+
+                    Text(title)
+                        .font(.system(size: 28, weight: .bold, design: .serif))
+                        .foregroundStyle(Color(red: 0.25, green: 0.20, blue: 0.18))
+
+                    Text(dateString)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 64)
+
+                // 宝丽来相纸卡片列表（相纸白框 + 倾斜感）
+                VStack(spacing: 28) {
+                    if !photos.isEmpty {
+                        ForEach(photos.indices, id: \.self) { idx in
+                            PolaroidCardItem(image: photos[idx], caption: "POLAROID MEMORY #\(idx + 1)", rotateDegree: idx % 2 == 0 ? -1.5 : 1.5)
+                        }
+                    } else {
+                        // 样板试看
+                        PolaroidCardPlaceholder(title: "拍立得照片样板 01", caption: "长白山雪景 · 2026.08.05", rotateDegree: -1.8)
+                        PolaroidCardPlaceholder(title: "拍立得照片样板 02", caption: "海边的晚霞与汽水", rotateDegree: 1.8)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 40)
+            }
+        }
+        .background(Color(red: 0.96, green: 0.94, blue: 0.91)) // 宝丽来暖黄复古纸感背景
+    }
+}
+
+private struct PolaroidCardPlaceholder: View {
+    let title: String
+    let caption: String
+    let rotateDegree: Double
+
+    var body: some View {
+        VStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color(red: 0.88, green: 0.90, blue: 0.92))
+                .frame(height: 260)
+                .overlay(
+                    VStack(spacing: 6) {
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.system(size: 32))
+                        Text(title)
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(.secondary)
+                )
+
+            HStack {
+                Text(caption)
+                    .font(.system(size: 14, weight: .medium, design: .serif))
+                    .foregroundStyle(Color(red: 0.30, green: 0.25, blue: 0.22))
+
+                Spacer()
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color(red: 0.70, green: 0.50, blue: 0.35))
+            }
+            .padding(.horizontal, 6)
+        }
+        .padding(16)
+        .padding(.bottom, 12)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 5)
+        .rotationEffect(.degrees(rotateDegree))
+    }
+}
+
+private struct PolaroidCardItem: View {
+    let image: UIImage
+    let caption: String
+    let rotateDegree: Double
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: 260)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+
+            HStack {
+                Text(caption)
+                    .font(.system(size: 14, weight: .medium, design: .serif))
+                    .foregroundStyle(Color(red: 0.30, green: 0.25, blue: 0.22))
+
+                Spacer()
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color(red: 0.70, green: 0.50, blue: 0.35))
+            }
+            .padding(.horizontal, 6)
+        }
+        .padding(16)
+        .padding(.bottom, 12)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 5)
+        .rotationEffect(.degrees(rotateDegree))
+    }
+}
+
+// MARK: - 主题 3：🖼️ 极简画廊风 (Gallery Exhibition)
+private struct StoryDetailGalleryView: View {
+    let title: String
+    let dateString: String
+    let photos: [UIImage]
+    let entries: [StoryDiaryEntry]
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 24) {
+                // 画廊展厅 Header
+                VStack(spacing: 6) {
+                    Text("EXHIBITION · 极简画廊")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .tracking(3)
+
+                    Text(title)
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(.primary)
+
+                    Text(dateString)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.top, 64)
+
+                // 2 列画廊瀑布流网格
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 16) {
+                    if !photos.isEmpty {
+                        ForEach(photos.indices, id: \.self) { idx in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Image(uiImage: photos[idx])
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(height: idx % 2 == 0 ? 190 : 230)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                                Text("NO. 0\(idx + 1)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    } else {
+                        // 浅色画廊样板占位
+                        GalleryItemPlaceholder(height: 210, title: "展品 01")
+                        GalleryItemPlaceholder(height: 170, title: "展品 02")
+                        GalleryItemPlaceholder(height: 180, title: "展品 03")
+                        GalleryItemPlaceholder(height: 220, title: "展品 04")
+                    }
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 40)
+            }
+        }
+        .background(Color(.systemBackground))
+    }
+}
+
+private struct GalleryItemPlaceholder: View {
+    let height: CGFloat
+    let title: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.systemGray6))
+                .frame(height: height)
+                .overlay(
+                    VStack(spacing: 4) {
+                        Image(systemName: "photo")
+                            .font(.system(size: 24))
+                        Text(title)
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundStyle(.secondary)
+                )
+
+            Text("EXHIBITION PLACEHOLDER")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.tertiary)
+        }
+    }
+}
+
+// MARK: - 主题 4：⏳ 时光时间轴风 (Timeline River)
+private struct StoryDetailTimelineView: View {
+    let title: String
+    let dateString: String
+    let photos: [UIImage]
+    let entries: [StoryDiaryEntry]
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 24) {
+                // 时间轴 Header
+                VStack(spacing: 6) {
+                    Text("TIMELINE · 时光长河")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color(red: 0.35, green: 0.55, blue: 0.75))
+                        .tracking(2.5)
+
+                    Text(title)
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(.primary)
+
+                    Text(dateString)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 64)
+
+                // 垂直时间轴节点列表
+                VStack(spacing: 0) {
+                    if !entries.isEmpty {
+                        ForEach(entries.indices, id: \.self) { idx in
+                            TimelineCardNode(entry: entries[idx], isLast: idx == entries.count - 1)
+                        }
+                    } else {
+                        // 浅色时间轴样板试看
+                        TimelinePlaceholderNode(nodeDate: "2026.08.05", nodeText: "时光时间轴样板 01 · 记录点滴瞬间", isLast: false)
+                        TimelinePlaceholderNode(nodeDate: "2026.07.20", nodeText: "时光时间轴样板 02 · 阳光与海浪的声音", isLast: true)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+        }
+        .background(Color(red: 0.97, green: 0.97, blue: 0.98))
+    }
+}
+
+private struct TimelinePlaceholderNode: View {
+    let nodeDate: String
+    let nodeText: String
+    let isLast: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            // 左侧时间轴节点线
+            VStack(spacing: 0) {
+                Circle()
+                    .fill(Color(red: 0.35, green: 0.55, blue: 0.75))
+                    .frame(width: 12, height: 12)
+
+                if !isLast {
+                    Rectangle()
+                        .fill(Color(red: 0.35, green: 0.55, blue: 0.75).opacity(0.3))
+                        .frame(width: 2)
+                        .frame(maxHeight: .infinity)
+                }
+            }
+            .padding(.top, 6)
+
+            // 右侧照片与内容卡片
+            VStack(alignment: .leading, spacing: 10) {
+                Text(nodeDate)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Color(red: 0.35, green: 0.55, blue: 0.75))
+
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+                    .frame(height: 180)
+                    .overlay(
+                        VStack(spacing: 6) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 28))
+                            Text(nodeText)
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                        .foregroundStyle(.secondary)
+                    )
+
+                Text("在时间轴里查看每一刻的照片记录。")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(.primary)
+            }
+            .padding(.bottom, 28)
+        }
+    }
+}
+
+private struct TimelineCardNode: View {
+    let entry: StoryDiaryEntry
+    let isLast: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            // 左侧时间轴节点线
+            VStack(spacing: 0) {
+                Circle()
+                    .fill(Color(red: 0.35, green: 0.55, blue: 0.75))
+                    .frame(width: 12, height: 12)
+
+                if !isLast {
+                    Rectangle()
+                        .fill(Color(red: 0.35, green: 0.55, blue: 0.75).opacity(0.3))
+                        .frame(width: 2)
+                        .frame(maxHeight: .infinity)
+                }
+            }
+            .padding(.top, 6)
+
+            // 右侧照片与内容卡片
+            VStack(alignment: .leading, spacing: 10) {
+                Text(entry.date, style: .date)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Color(red: 0.35, green: 0.55, blue: 0.75))
+
+                if let img = entry.images.first {
+                    Image(uiImage: img)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 200)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+
+                if !entry.text.isEmpty {
+                    Text(entry.text)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(.primary)
+                        .lineSpacing(4)
+                }
+            }
+            .padding(.bottom, 28)
+        }
+    }
 }
 
 private struct NewDiaryEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var entryDate = Date()
     @State private var note = ""
-    @State private var selectedItems: [PhotosPickerItem] = []
     @State private var selectedImages: [UIImage] = []
     @FocusState private var isNoteFocused: Bool
     let onSave: (StoryDiaryEntry) -> Void
@@ -332,12 +2187,13 @@ private struct NewDiaryEntrySheet: View {
                                     .clipped()
                             }
 
-                            PhotosPicker(selection: $selectedItems, maxSelectionCount: 9, matching: .images) {
+                            Button {
+                            } label: {
                                 VStack(spacing: 8) {
-                                    Image(systemName: "photo.badge.plus")
+                                    Image(systemName: "photo")
                                         .font(.system(size: 25, weight: .regular))
 
-                                    Text("添加照片")
+                                    Text("照片稍后添加")
                                         .font(.system(size: 15, weight: .semibold))
                                 }
                                 .foregroundStyle(.secondary)
@@ -399,137 +2255,234 @@ private struct NewDiaryEntrySheet: View {
             }
         }
         .presentationDetents([.large])
-        .onChange(of: selectedItems) { _, newItems in
-            Task {
-                var images: [UIImage] = []
-
-                for item in newItems {
-                    if let data = try? await item.loadTransferable(type: Data.self),
-                       let image = UIImage(data: data) {
-                        images.append(image)
-                    }
-                }
-
-                selectedImages = images
-            }
-        }
     }
 }
 
-private struct StoryDiaryCard: View {
-    let entry: StoryDiaryEntry
-
-    private var dateText: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "yyyy年M月d日"
-        return formatter.string(from: entry.date)
-    }
-
-    private var noteText: String {
-        entry.text.isEmpty ? "这一天的照片" : entry.text
-    }
+// MARK: - 主题 5：📸 暗房胶片风 (Editorial 35mm Darkroom - 双色明亮纸质美学)
+private struct StoryDetailDarkroomView: View {
+    let title: String
+    let dateString: String
+    let photos: [UIImage]
+    let entries: [StoryDiaryEntry]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            if !entry.images.isEmpty {
-                StoryDiaryPhotoLayout(images: entry.images)
-                    .frame(maxWidth: .infinity)
-            }
-
-            VStack(alignment: .leading, spacing: 9) {
-                Text(noteText)
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundStyle(.primary)
-                    .lineSpacing(5)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                Text(dateText)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color(.systemGray3))
-            }
-            .padding(.bottom, 6)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
-    }
-}
-
-private struct StoryDiaryPhotoLayout: View {
-    let images: [UIImage]
-
-    var body: some View {
-        GeometryReader { proxy in
-            let height = proxy.size.width * 0.625
-
-            if images.count == 1, let image = images.first {
-                StoryDiaryImage(image: image, width: proxy.size.width, height: height)
-            } else {
-                HStack(spacing: 0) {
-                    ForEach(Array(images.prefix(2).enumerated()), id: \.offset) { _, image in
-                        StoryDiaryImage(image: image, width: proxy.size.width / 2, height: height)
-                    }
-                }
-            }
-        }
-        .aspectRatio(1.6, contentMode: .fit)
-    }
-}
-
-private struct StoryDiaryImage: View {
-    let image: UIImage
-    let width: CGFloat
-    let height: CGFloat
-
-    var body: some View {
-        Image(uiImage: image)
-            .resizable()
-            .scaledToFill()
-            .frame(width: width, height: height)
-            .clipped()
-    }
-}
-
-private struct StoryEmptyIcon: View {
-    private let columns = [
-        GridItem(.fixed(46), spacing: 4),
-        GridItem(.fixed(46), spacing: 4)
-    ]
-
-    var body: some View {
-        LazyVGrid(columns: columns, spacing: 4) {
-            iconTile(.blue.opacity(0.75))
-            iconTile(.cyan.opacity(0.65))
-            iconTile(.indigo.opacity(0.55))
-            iconTile(.teal.opacity(0.7))
-        }
-        .frame(width: 96, height: 96)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-    }
-
-    private func iconTile(_ color: Color) -> some View {
-        RoundedRectangle(cornerRadius: 2)
-            .fill(
-                LinearGradient(
-                    colors: [color.opacity(0.95), color.opacity(0.55)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+        ZStack {
+            // 典雅明亮暖白/米纸底色 (极高阅读舒感，清爽看图)
+            LinearGradient(
+                colors: [
+                    Color(red: 0.96, green: 0.95, blue: 0.92),
+                    Color(red: 0.93, green: 0.91, blue: 0.87)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
             )
-            .frame(width: 46, height: 46)
+            .ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                // 1. 中央 35mm 暗房标头 Header (经典暗房朱红 + 深色衬线)
+                VStack(spacing: 6) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "camera.aperture")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.72, green: 0.22, blue: 0.18))
+
+                        Text("DARKROOM 35MM · KODAK PORTRA")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color(red: 0.72, green: 0.22, blue: 0.18))
+                            .tracking(2)
+                    }
+
+                    Text(title.isEmpty ? "暗房胶片" : title)
+                        .font(.system(size: 28, weight: .bold, design: .serif))
+                        .foregroundStyle(Color(red: 0.18, green: 0.16, blue: 0.15))
+
+                    Text(dateString)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.38))
+                }
+                .padding(.top, 14)
+
+                // 2. 暖色复古暗房展板容器
+                VStack(alignment: .leading, spacing: 0) {
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 20) {
+                            // 3 列一排的 35mm 明亮相纸带边框底片
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 10),
+                                GridItem(.flexible(), spacing: 10),
+                                GridItem(.flexible(), spacing: 10)
+                            ], spacing: 12) {
+                                if !photos.isEmpty {
+                                    ForEach(photos.indices, id: \.self) { idx in
+                                        FilmCardTileItem(image: photos[idx], index: idx + 1)
+                                    }
+                                } else {
+                                    FilmCardTilePlaceholder(title: "EXP 01", index: 1)
+                                    FilmCardTilePlaceholder(title: "EXP 02", index: 2)
+                                    FilmCardTilePlaceholder(title: "EXP 03", index: 3)
+                                }
+                            }
+
+                            // 故事文字条目
+                            if !entries.isEmpty {
+                                VStack(spacing: 12) {
+                                    ForEach(entries) { entry in
+                                        if !entry.text.isEmpty {
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                HStack {
+                                                    Text("NOTE")
+                                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                                        .foregroundStyle(Color(red: 0.72, green: 0.22, blue: 0.18))
+                                                    Spacer()
+                                                }
+                                                Text(entry.text)
+                                                    .font(.system(size: 14, weight: .regular))
+                                                    .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
+                                                    .lineSpacing(5)
+                                            }
+                                            .padding(16)
+                                            .background(Color.white)
+                                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                    .stroke(Color(red: 0.72, green: 0.22, blue: 0.18).opacity(0.2), lineWidth: 1)
+                                            )
+                                            .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 3)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .padding(.bottom, 60)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(red: 0.98, green: 0.97, blue: 0.95))
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color(red: 0.72, green: 0.22, blue: 0.18).opacity(0.15), lineWidth: 1)
+                )
+                .padding(.horizontal, 14)
+                .padding(.bottom, 10)
+            }
+        }
+        .tint(Color(red: 0.18, green: 0.16, blue: 0.15))
     }
 }
 
-private struct ProfileView: View {
+private struct FilmCardTilePlaceholder: View {
+    let title: String
+    let index: Int
+
     var body: some View {
-        NavigationStack {
-            Text("我的")
-                .foregroundStyle(.secondary)
-                .navigationTitle("我的")
+        VStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color(red: 0.90, green: 0.92, blue: 0.94))
+                .aspectRatio(1, contentMode: .fit)
+                .overlay(
+                    VStack(spacing: 4) {
+                        Image(systemName: "photo")
+                            .font(.system(size: 18))
+                        Text(title)
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundStyle(Color(red: 0.5, green: 0.45, blue: 0.42))
+                )
+
+            HStack {
+                Text("#0\(index)")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.72, green: 0.22, blue: 0.18))
+                Spacer()
+                Text("35MM")
+                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.72, green: 0.22, blue: 0.18).opacity(0.8))
+            }
+            .padding(.horizontal, 2)
+        }
+        .padding(6)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+    }
+}
+
+private struct FilmCardTileItem: View {
+    let image: UIImage
+    let index: Int
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .aspectRatio(1, contentMode: .fit)
+                .clipped()
+
+            HStack {
+                Text("#0\(index)")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.72, green: 0.22, blue: 0.18))
+                Spacer()
+                Text("35MM")
+                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.72, green: 0.22, blue: 0.18).opacity(0.8))
+            }
+            .padding(.horizontal, 2)
+        }
+        .padding(6)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+    }
+}
+
+
+struct ProfileView: View {
+    var body: some View {
+        ZStack {
+            Color.white
+                .ignoresSafeArea()
         }
     }
 }
 
 #Preview {
     ContentView()
+}
+
+extension View {
+    func hideTabBarOnRealDevice() -> some View {
+        self
+            .toolbar(.hidden, for: .tabBar)
+            .toolbarVisibility(.hidden, for: .tabBar)
+            .onAppear {
+                UITabBar.setTabBarHiddenOnDevice(true)
+            }
+            .onDisappear {
+                UITabBar.setTabBarHiddenOnDevice(false)
+            }
+    }
+}
+
+fileprivate extension UITabBar {
+    static func setTabBarHiddenOnDevice(_ hidden: Bool) {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootVC = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController else { return }
+        findTabBarController(in: rootVC)?.tabBar.isHidden = hidden
+    }
+
+    private static func findTabBarController(in vc: UIViewController?) -> UITabBarController? {
+        if let tabBarVC = vc as? UITabBarController {
+            return tabBarVC
+        }
+        for child in vc?.children ?? [] {
+            if let found = findTabBarController(in: child) {
+                return found
+            }
+        }
+        return nil
+    }
 }

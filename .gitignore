@@ -2,3 +2,6 @@
 xcuserdata/
 .DS_Store
 DerivedData/
+build_tmp/
+.agents/
+skills/
