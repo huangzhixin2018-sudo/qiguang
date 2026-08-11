@@ -2569,7 +2569,7 @@ private struct PrivacyPolicySheet: View {
 
                         policySection(
                             title: "6. 联系我们",
-                            content: "如果您对本隐私政策或个人信息保护有任何疑问，可通过电子邮箱与我们联系：support@qiguang-app.com"
+                            content: "如果您对本隐私政策或个人信息保护有任何疑问，可通过以下方式与我们联系：\n• 联系邮箱：752297022@qq.com\n• 联系名称：栖光"
                         )
                     }
                 }
