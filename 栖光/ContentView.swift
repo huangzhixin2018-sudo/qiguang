@@ -2419,11 +2419,115 @@ private struct FilmCardTileItem: View {
 
 
 struct ProfileView: View {
+    @State private var cacheSize = "0.0 MB"
+    @State private var toastMessage: String?
+
     var body: some View {
-        ZStack {
-            Color.white
-                .ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                DotGridBackground()
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 28) {
+                        // 1. 极简编辑部 Header (用户/应用标语)
+                        VStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color(red: 0.94, green: 0.92, blue: 0.88))
+                                    .frame(width: 80, height: 80)
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 36, weight: .light))
+                                    .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
+                            }
+                            .overlay(Circle().stroke(Color(red: 0.82, green: 0.78, blue: 0.72), lineWidth: 1))
+                            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
+
+                            VStack(spacing: 4) {
+                                Text("栖光")
+                                    .font(.system(size: 24, weight: .bold, design: .serif))
+                                    .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
+
+                                Text("记录生命里每一抹亮色")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color(red: 0.55, green: 0.50, blue: 0.45))
+                            }
+                        }
+                        .padding(.top, 32)
+
+                        // 2. 苹果上线必备合规与基础功能入口列表 (极简双卡片分组)
+                        VStack(spacing: 16) {
+                            // 分组 1：法律与隐私合规 (App Store 强制必备 Guideline 5.1.1)
+                            VStack(spacing: 0) {
+                                profileRow(icon: "lock.shield", title: "隐私政策", value: "") {
+                                    toastMessage = "《栖光隐私政策》"
+                                }
+                                Divider().padding(.leading, 50)
+                                profileRow(icon: "doc.text", title: "服务协议", value: "") {
+                                    toastMessage = "《栖光用户服务协议》"
+                                }
+                            }
+                            .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
+
+                            // 分组 2：基础轻量工具
+                            VStack(spacing: 0) {
+                                profileRow(icon: "trash", title: "清除缓存", value: cacheSize) {
+                                    cacheSize = "0.0 MB"
+                                    toastMessage = "已成功清除本地缓存"
+                                }
+                                Divider().padding(.leading, 50)
+                                profileRow(icon: "info.circle", title: "关于栖光", value: "v1.0.0") {
+                                    toastMessage = "栖光 v1.0.0 正式版"
+                                }
+                            }
+                            .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .padding(.bottom, 100)
+                }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .alert("提示", isPresented: Binding(
+                get: { toastMessage != nil },
+                set: { if !$0 { toastMessage = nil } }
+            )) {
+                Button("好", role: .cancel) { toastMessage = nil }
+            } message: {
+                Text(toastMessage ?? "")
+            }
         }
+    }
+
+    private func profileRow(icon: String, title: String, value: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
+                    .frame(width: 24)
+
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
+
+                Spacer()
+
+                if !value.isEmpty {
+                    Text(value)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.gray)
+                }
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color(red: 0.75, green: 0.70, blue: 0.65))
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 52)
+        }
+        .buttonStyle(.plain)
     }
 }
 
