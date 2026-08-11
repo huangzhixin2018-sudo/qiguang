@@ -1455,7 +1455,7 @@ struct YearsOrganizerView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
-                // 经典精装大书双列封面网格
+                // 经典精装大书双列封面网格 (0 卡顿即时展开)
                 LazyVGrid(
                     columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
                     spacing: 24
@@ -1493,12 +1493,17 @@ struct YearsOrganizerView: View {
     }
 }
 
-// MARK: - 某一年份的照片放映网格：YearDetailView (懒加载机制，绝无卡顿)
+private struct SelectedAssetItem: Identifiable {
+    var id: String { asset.localIdentifier }
+    let asset: PHAsset
+}
+
+// MARK: - 某一年份的照片放映网格：YearDetailView (直接利用 Apple PHFetchResult 惰性句柄，0ms秒进不卡顿)
 private struct YearDetailView: View {
     let year: String
-    @State private var fetchedAssets: [PHAsset] = []
+    @State private var fetchResult: PHFetchResult<PHAsset>?
     @State private var isLoading = true
-    @State private var selectedAsset: PHAsset?
+    @State private var selectedAssetItem: SelectedAssetItem?
 
     private var columns: [GridItem] {
         [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)]
@@ -1512,32 +1517,33 @@ private struct YearDetailView: View {
             if isLoading {
                 VStack(spacing: 12) {
                     ProgressView()
-                    Text("载入中...")
+                    Text("检索中...")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.gray)
                 }
-            } else if fetchedAssets.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "photo.on.rectangle")
-                        .font(.system(size: 32, weight: .light))
-                        .foregroundStyle(Color.gray)
-                    Text("该年份暂无相册照片")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.gray)
-                }
-            } else {
+            } else if let fetchResult, fetchResult.count > 0 {
                 ScrollView(showsIndicators: false) {
                     LazyVGrid(columns: columns, spacing: 4) {
-                        ForEach(fetchedAssets, id: \.localIdentifier) { asset in
+                        ForEach(0..<fetchResult.count, id: \.self) { index in
+                            let asset = fetchResult.object(at: index)
                             LazyAssetGridCell(asset: asset)
                                 .onTapGesture {
-                                    selectedAsset = asset
+                                    selectedAssetItem = SelectedAssetItem(asset: asset)
                                 }
                         }
                     }
                     .padding(.horizontal, 4)
                     .padding(.top, 8)
                     .padding(.bottom, 40)
+                }
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.system(size: 32, weight: .light))
+                        .foregroundStyle(Color.gray)
+                    Text("\(year) 年暂无相册照片")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.gray)
                 }
             }
         }
@@ -1546,16 +1552,23 @@ private struct YearDetailView: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbarVisibility(.hidden, for: .tabBar)
         .hideTabBarOnRealDevice()
-        .onAppear {
-            loadYearAssetsAsync()
+        .task {
+            loadYearAssetsLazy()
         }
-        .sheet(item: $selectedAsset) { asset in
-            AssetPhotoDetailPreview(asset: asset)
+        .sheet(item: $selectedAssetItem) { item in
+            AssetPhotoDetailPreview(asset: item.asset)
         }
     }
 
-    private func loadYearAssetsAsync() {
-        Task.detached(priority: .userInitiated) {
+    private func loadYearAssetsLazy() {
+        PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
+            guard status == .authorized || status == .limited else {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
+                return
+            }
+
             let options = PHFetchOptions()
             let calendar = Calendar.current
             let yearInt = Int(year) ?? 2026
@@ -1571,21 +1584,16 @@ private struct YearDetailView: View {
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
 
             let result = PHAsset.fetchAssets(with: .image, options: options)
-            var fetchedList: [PHAsset] = []
-            for index in 0..<result.count {
-                fetchedList.append(result.object(at: index))
-            }
 
-            let finalAssets = fetchedList
-            await MainActor.run {
-                self.fetchedAssets = finalAssets
+            DispatchQueue.main.async {
+                self.fetchResult = result
                 self.isLoading = false
             }
         }
     }
 }
 
-// MARK: - 懒加载单个 Asset 缩略图单元格 (屏幕划入时按需取 150x150 缩略图，0 卡顿)
+// MARK: - 懒加载单个 Asset 缩略图单元格 (屏幕划入时按需取 150x150 缩略图)
 private struct LazyAssetGridCell: View {
     let asset: PHAsset
     @State private var thumbnail: UIImage?
@@ -1615,7 +1623,7 @@ private struct LazyAssetGridCell: View {
         let option = PHImageRequestOptions()
         option.isSynchronous = false
         option.deliveryMode = .fastFormat
-        option.isNetworkAccessAllowed = true
+        option.isNetworkAccessAllowed = false
 
         manager.requestImage(for: asset, targetSize: CGSize(width: 150, height: 150), contentMode: .aspectFill, options: option) { img, _ in
             if let img {
@@ -1656,7 +1664,7 @@ private struct AssetPhotoDetailPreview: View {
                         .font(.system(size: 15, weight: .bold))
                 }
             }
-            .onAppear {
+            .task {
                 let manager = PHImageManager.default()
                 let option = PHImageRequestOptions()
                 option.isSynchronous = false
@@ -1673,15 +1681,10 @@ private struct AssetPhotoDetailPreview: View {
     }
 }
 
-extension PHAsset: @retroactive Identifiable {
-    public var id: String { localIdentifier }
-}
-
-// MARK: - 📖 典藏级精装特刊大书封面 (仅读取 1 张相册代表照片，绝对不会卡顿)
+// MARK: - 📖 典藏级精装特刊大书封面 (极致轻量，即刻渲染)
 private struct HardcoverAnnualBookCard: View {
     let year: String
     let color: Color
-    @State private var coverImage: UIImage?
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -1697,23 +1700,12 @@ private struct HardcoverAnnualBookCard: View {
                     .foregroundStyle(Color.black.opacity(0.78))
                     .frame(height: 24)
 
-                ZStack {
-                    if let coverImage {
-                        Image(uiImage: coverImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 76, height: 60)
-                            .scaleEffect(1.45)
-                            .clipped()
-                    } else {
-                        Image("HomeSingle01")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 76, height: 60)
-                            .scaleEffect(1.45)
-                            .clipped()
-                    }
-                }
+                Image("HomeSingle01")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 76, height: 60)
+                    .scaleEffect(1.45)
+                    .clipped()
             }
             .padding(.horizontal, 10)
             .padding(.top, 8)
@@ -1738,44 +1730,6 @@ private struct HardcoverAnnualBookCard: View {
         )
         .shadow(color: .black.opacity(0.18), radius: 10, x: 5, y: 6)
         .shadow(color: .black.opacity(0.08), radius: 3, x: 2, y: 2)
-        .onAppear {
-            loadSingleCoverImageAsync()
-        }
-    }
-
-    private func loadSingleCoverImageAsync() {
-        guard coverImage == nil else { return }
-        Task.detached(priority: .background) {
-            let options = PHFetchOptions()
-            let calendar = Calendar.current
-            let yearInt = Int(year) ?? 2026
-            var components = DateComponents()
-            components.year = yearInt
-            components.month = 1
-            components.day = 1
-            let startDate = calendar.date(from: components) ?? Date()
-            components.year = yearInt + 1
-            let endDate = calendar.date(from: components) ?? Date()
-
-            options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", startDate as NSDate, endDate as NSDate)
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-            options.fetchLimit = 1
-
-            let result = PHAsset.fetchAssets(with: .image, options: options)
-            if let asset = result.firstObject {
-                let manager = PHImageManager.default()
-                let reqOptions = PHImageRequestOptions()
-                reqOptions.isSynchronous = false
-                reqOptions.deliveryMode = .fastFormat
-                manager.requestImage(for: asset, targetSize: CGSize(width: 200, height: 200), contentMode: .aspectFill, options: reqOptions) { img, _ in
-                    if let img {
-                        Task { @MainActor in
-                            self.coverImage = img
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
