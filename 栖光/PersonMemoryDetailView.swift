@@ -29,6 +29,8 @@ struct PersonMemoryDetailView: View {
     @State private var showPhotoPicker = false
     @State private var showVideoPicker = false
     @State private var showCoverPicker = false
+    @State private var showCreateEventSheet = false
+    @State private var showCreateTicketSheet = false
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectedVideoItem: PhotosPickerItem?
     @State private var selectedCoverItem: PhotosPickerItem?
@@ -58,6 +60,8 @@ struct PersonMemoryDetailView: View {
                     contentWidth: safeWidth,
                     topInset: proxy.safeAreaInsets.top,
                     selectedSection: $selectedSection,
+                    onAddEvent: { showCreateEventSheet = true },
+                    onAddTicket: { showCreateTicketSheet = true },
                     onAddVideo: { showVideoPicker = true }
                 )
 
@@ -65,6 +69,8 @@ struct PersonMemoryDetailView: View {
                     topInset: proxy.safeAreaInsets.top,
                     selectedSection: selectedSection,
                     onBack: { dismiss() },
+                    onAddEvent: { showCreateEventSheet = true },
+                    onAddTicket: { showCreateTicketSheet = true },
                     onAddPhoto: { showPhotoPicker = true },
                     onAddVideo: { showVideoPicker = true },
                     onChangeCover: { showCoverPicker = true },
@@ -91,6 +97,20 @@ struct PersonMemoryDetailView: View {
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
         .photosPicker(isPresented: $showVideoPicker, selection: $selectedVideoItem, matching: .videos)
         .photosPicker(isPresented: $showCoverPicker, selection: $selectedCoverItem, matching: .images)
+        .sheet(isPresented: $showCreateEventSheet) {
+            CreateEventSheet { newEvent in
+                poster.events.append(newEvent)
+                MemoryPosterManager.shared.addEventToPoster(id: poster.id, event: newEvent)
+            }
+            .presentationDetents([.height(360)])
+        }
+        .sheet(isPresented: $showCreateTicketSheet) {
+            CreateTicketSheet { newTicket in
+                poster.tickets.append(newTicket)
+                MemoryPosterManager.shared.addTicketToPoster(id: poster.id, ticket: newTicket)
+            }
+            .presentationDetents([.height(440)])
+        }
         .onChange(of: selectedPhotoItem) { _, newItem in
             guard let newItem else { return }
             Task {
@@ -297,6 +317,8 @@ private struct CelebrityFloatingControls: View {
     let topInset: CGFloat
     let selectedSection: CelebrityDetailSection
     let onBack: () -> Void
+    let onAddEvent: () -> Void
+    let onAddTicket: () -> Void
     let onAddPhoto: () -> Void
     let onAddVideo: () -> Void
     let onChangeCover: () -> Void
@@ -318,16 +340,19 @@ private struct CelebrityFloatingControls: View {
                 Spacer()
 
                 HStack(spacing: 10) {
-                    // 仅当当前选中标签需要添加功能时显示加号按钮 (记录标签隐藏添加按钮)
                     if selectedSection != .record {
                         Button {
                             switch selectedSection {
                             case .record:
                                 break
-                            case .event, .ticket, .picture:
-                                onAddPhoto() // 选中票根、照片或事件时，点击直接选择照片/海报！
+                            case .event:
+                                onAddEvent()
+                            case .ticket:
+                                onAddTicket()
+                            case .picture:
+                                onAddPhoto()
                             case .video:
-                                onAddVideo() // 选中视频时，点击直接选择视频！
+                                onAddVideo()
                             }
                         } label: {
                             Image(systemName: "plus")
@@ -436,6 +461,8 @@ private struct CelebrityMemoryDetailContentView: View {
     let contentWidth: CGFloat
     let topInset: CGFloat
     @Binding var selectedSection: CelebrityDetailSection
+    let onAddEvent: () -> Void
+    let onAddTicket: () -> Void
     let onAddVideo: () -> Void
 
     private var displayName: String {
@@ -484,9 +511,9 @@ private struct CelebrityMemoryDetailContentView: View {
                                 DetailStatColumnTile(number: poster.mbti.isEmpty ? "ENFP" : poster.mbti, label: "MBTI 人格")
                             }
                         case .event:
-                            CelebrityEventSection(poster: poster)
+                            CelebrityEventSection(poster: poster, onAddEvent: onAddEvent)
                         case .ticket:
-                            CelebrityPhotoSection(poster: poster)
+                            CelebrityPhotoSection(poster: poster, onAddTicket: onAddTicket)
                         case .picture:
                             CelebrityPictureSection(poster: poster, width: sectionWidth)
                         case .video:
@@ -507,134 +534,105 @@ private struct CelebrityMemoryDetailContentView: View {
     }
 }
 
-// MARK: - 画报：事件节点模块 (基于真实画报数据渲染)
+// MARK: - 画报：事件节点模块 (支持真实创建与列表渲染)
 private struct CelebrityEventSection: View {
     let poster: PersonMemoryPoster
+    let onAddEvent: () -> Void
 
     var body: some View {
-        if poster.avatarImageData == nil && poster.coverImageData == nil {
-            VStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.black.opacity(0.04))
-                        .frame(width: 64, height: 64)
-                    Image(systemName: "calendar.badge.clock")
-                        .font(.system(size: 26, weight: .medium))
-                        .foregroundStyle(Color.gray)
-                }
-                Text("暂无记录事件")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.gray)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 180)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        if poster.events.isEmpty {
+            Spacer(minLength: 40)
         } else {
-            ZStack(alignment: .bottomLeading) {
-                Group {
-                    if let data = poster.coverImageData ?? poster.avatarImageData, let uiImage = UIImage(data: data) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
+            VStack(spacing: 20) {
+                ForEach(poster.events) { event in
+                    ZStack(alignment: .bottomLeading) {
+                        Group {
+                            if let data = event.imageData ?? poster.coverImageData ?? poster.avatarImageData, let uiImage = UIImage(data: data) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                            } else {
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.18, green: 0.16, blue: 0.15),
+                                        Color(red: 0.28, green: 0.25, blue: 0.22)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            }
+                        }
+                        .frame(height: 210)
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+
                         LinearGradient(
-                            colors: [
-                                Color(red: 0.18, green: 0.16, blue: 0.15),
-                                Color(red: 0.28, green: 0.25, blue: 0.22)
+                            stops: [
+                                .init(color: Color.black.opacity(0.05), location: 0.0),
+                                .init(color: Color.black.opacity(0.40), location: 0.45),
+                                .init(color: Color.black.opacity(0.88), location: 1.0)
                             ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                            startPoint: .top,
+                            endPoint: .bottom
                         )
+                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(event.dateString)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .tracking(0.6)
+                                .foregroundStyle(Color.white.opacity(0.82))
+
+                            Text(event.title)
+                                .font(.system(size: 26, weight: .bold, design: .serif))
+                                .foregroundStyle(Color.white)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.85)
+                        }
+                        .padding(22)
                     }
+                    .frame(height: 210)
+                    .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
                 }
-                .frame(height: 210)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-
-                LinearGradient(
-                    stops: [
-                        .init(color: Color.black.opacity(0.05), location: 0.0),
-                        .init(color: Color.black.opacity(0.40), location: 0.45),
-                        .init(color: Color.black.opacity(0.88), location: 1.0)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(poster.solarDate.isEmpty ? "创建专属记忆" : poster.solarDate)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .tracking(0.6)
-                        .foregroundStyle(Color.white.opacity(0.82))
-
-                    Text(poster.cardTitle.isEmpty ? poster.name : poster.cardTitle)
-                        .font(.system(size: 26, weight: .bold, design: .serif))
-                        .foregroundStyle(Color.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.85)
-                }
-                .padding(22)
             }
-            .frame(height: 210)
-            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
         }
     }
 }
 
-// MARK: - 明星画报：照片展示模块
+// MARK: - 画报：照片展示模块
 private struct CelebrityPictureSection: View {
     let poster: PersonMemoryPoster
     let width: CGFloat
 
     var body: some View {
-        VStack(spacing: 16) {
-            if let data = poster.avatarImageData, let uiImage = UIImage(data: data) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: width, height: 320)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                        .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
+        if let data = poster.avatarImageData, let uiImage = UIImage(data: data) {
+            VStack(alignment: .leading, spacing: 12) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: width, height: 320)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
 
-                    HStack {
-                        Text(poster.cardTitle.isEmpty ? "精彩时刻照片" : poster.cardTitle)
-                            .font(.system(size: 16, weight: .bold, design: .serif))
-                            .foregroundStyle(Color.black.opacity(0.85))
-                        Spacer()
-                        Text("独家回忆")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.gray)
-                    }
-                    .padding(.horizontal, 4)
-                }
-            } else {
-                VStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.black.opacity(0.04))
-                            .frame(width: 64, height: 64)
-                        Image(systemName: "photo.on.rectangle.angled")
-                            .font(.system(size: 26, weight: .medium))
-                            .foregroundStyle(Color.gray)
-                    }
-                    Text("暂无相册照片")
-                        .font(.system(size: 15, weight: .medium))
+                HStack {
+                    Text(poster.cardTitle.isEmpty ? "精彩时刻照片" : poster.cardTitle)
+                        .font(.system(size: 16, weight: .bold, design: .serif))
+                        .foregroundStyle(Color.black.opacity(0.85))
+                    Spacer()
+                    Text("独家回忆")
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.gray)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 180)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .padding(.horizontal, 4)
             }
+        } else {
+            Spacer(minLength: 40)
         }
     }
 }
 
-// MARK: - 明星画报：真实视频模块 (彻底去除模拟照片，真视频加载与播放)
+// MARK: - 画报：真实视频模块 (全量留白极简排版)
 private struct CelebrityVideoSection: View {
     let poster: PersonMemoryPoster
     let onAddVideo: () -> Void
@@ -646,94 +644,43 @@ private struct CelebrityVideoSection: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
-            if let videoURL = localVideoURL {
-                // 🌟 真实上传成功的视频播放窗口
-                VStack(spacing: 16) {
-                    ZStack {
-                        LocalVideoPlayerView(url: videoURL)
-                            .frame(height: 240)
-                            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-                            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+        if let videoURL = localVideoURL {
+            VStack(spacing: 16) {
+                ZStack {
+                    LocalVideoPlayerView(url: videoURL)
+                        .frame(height: 240)
+                        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
 
-                        // 32pt 膨胀复古 CRT 描边
-                        RoundedRectangle(cornerRadius: 32, style: .continuous)
-                            .strokeBorder(
-                                LinearGradient(
-                                    colors: [Color.black.opacity(0.15), Color.black.opacity(0.04)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.5
-                            )
-                    }
-
-                    // 更换视频按钮
-                    Button(action: onAddVideo) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "arrow.triangle.2.circlepath.camera")
-                                .font(.system(size: 14, weight: .bold))
-                            Text("更换视频")
-                                .font(.system(size: 14, weight: .bold))
-                        }
-                        .foregroundStyle(Color.black.opacity(0.75))
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Color.white)
-                        .clipShape(Capsule())
-                        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
-                    }
-                    .buttonStyle(.plain)
+                    RoundedRectangle(cornerRadius: 32, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color.black.opacity(0.15), Color.black.opacity(0.04)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
                 }
-            } else {
-                // 🌟 彻底清除模拟图片！显示真实视频上传引导卡片 (Clean Empty State)
-                VStack(spacing: 18) {
-                    ZStack {
-                        Circle()
-                            .fill(Color(red: 0.35, green: 0.55, blue: 0.75).opacity(0.12))
-                            .frame(width: 76, height: 76)
 
-                        Image(systemName: "video.badge.plus")
-                            .font(.system(size: 34, weight: .medium))
-                            .foregroundStyle(Color(red: 0.35, green: 0.55, blue: 0.75))
+                Button(action: onAddVideo) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.triangle.2.circlepath.camera")
+                            .font(.system(size: 14, weight: .bold))
+                        Text("更换视频")
+                            .font(.system(size: 14, weight: .bold))
                     }
-                    .padding(.top, 14)
-
-                    VStack(spacing: 6) {
-                        Text("尚未选择回忆视频")
-                            .font(.system(size: 18, weight: .bold, design: .serif))
-                            .foregroundStyle(Color.black)
-
-                        Text("完全兼容手机相册中的横屏(16:9)或竖屏(9:16)视频")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.gray)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
-                    }
-
-                    Button(action: onAddVideo) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 16, weight: .bold))
-                            Text("上传手机真实视频")
-                                .font(.system(size: 15, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(Color.red.opacity(0.85)) // 莫兰迪暖红强调色
-                        .clipShape(Capsule())
-                        .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 4)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.bottom, 12)
+                    .foregroundStyle(Color.black.opacity(0.75))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.white)
+                    .clipShape(Capsule())
+                    .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-                .shadow(color: Color.black.opacity(0.06), radius: 14, x: 0, y: 6)
+                .buttonStyle(.plain)
             }
+        } else {
+            Spacer(minLength: 40)
         }
     }
 }
@@ -782,12 +729,21 @@ private struct VideoTransferable: Transferable {
     }
 }
 
-// MARK: - 明星画报：票根模块 (直接呈现极简复古缺口票根)
+// MARK: - 画报：票根模块 (支持真实创建与 1:1 缺口票根卡片渲染)
 private struct CelebrityPhotoSection: View {
     let poster: PersonMemoryPoster
+    let onAddTicket: () -> Void
 
     var body: some View {
-        ConcertTicketStubCard(poster: poster)
+        if poster.tickets.isEmpty {
+            Spacer(minLength: 40)
+        } else {
+            VStack(spacing: 20) {
+                ForEach(poster.tickets) { ticket in
+                    ConcertTicketStubCard(poster: poster, ticket: ticket)
+                }
+            }
+        }
     }
 }
 
@@ -838,18 +794,26 @@ private struct TicketNotchedShape: Shape {
 
 private struct ConcertTicketStubCard: View {
     let poster: PersonMemoryPoster
+    var ticket: MemoryTicketRecord? = nil
 
     private var eventTitle: String {
+        if let ticket { return ticket.title }
         let name = poster.cardTitle.isEmpty ? poster.name : poster.cardTitle
         return "\(name) 专属纪念票根"
     }
 
     private var eventDate: String {
-        poster.solarDate.isEmpty ? "珍藏时刻" : poster.solarDate
+        if let ticket { return ticket.dateString }
+        return poster.solarDate.isEmpty ? "珍藏时刻" : poster.solarDate
     }
 
     private var eventLocation: String {
-        poster.tagline.isEmpty ? "栖光回忆记录" : poster.tagline
+        if let ticket { return ticket.locationString }
+        return poster.tagline.isEmpty ? "栖光回忆记录" : poster.tagline
+    }
+
+    private var ticketImageData: Data? {
+        ticket?.imageData ?? poster.avatarImageData
     }
 
     var body: some View {
@@ -870,7 +834,7 @@ private struct ConcertTicketStubCard: View {
                     HStack(alignment: .top, spacing: 14) {
                         // 缩略海报图
                         ZStack {
-                            if let data = poster.avatarImageData, let uiImage = UIImage(data: data) {
+                            if let data = ticketImageData, let uiImage = UIImage(data: data) {
                                 Image(uiImage: uiImage)
                                     .resizable()
                                     .scaledToFill()
@@ -1047,5 +1011,182 @@ private struct LineShape: Shape {
         path.move(to: CGPoint(x: rect.minX, y: rect.midY))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
         return path
+    }
+}
+
+private struct CreateEventSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var title = ""
+    @State private var dateString = ""
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var imageData: Data?
+
+    let onSave: (MemoryEventRecord) -> Void
+
+    init(onSave: @escaping (MemoryEventRecord) -> Void) {
+        self.onSave = onSave
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy年MM月dd日"
+        _dateString = State(initialValue: formatter.string(from: Date()))
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("事件标题")
+                        .font(.system(size: 14, weight: .semibold, design: .serif))
+                    TextField("输入事件标题，如：第一次看展", text: $title)
+                        .padding(.horizontal, 14)
+                        .frame(height: 44)
+                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("事件日期")
+                        .font(.system(size: 14, weight: .semibold, design: .serif))
+                    TextField("日期", text: $dateString)
+                        .padding(.horizontal, 14)
+                        .frame(height: 44)
+                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    HStack {
+                        Image(systemName: "photo.badge.plus")
+                        Text(imageData == nil ? "选择事件图片 (选填)" : "已选择图片")
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.black.opacity(0.75))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .onChange(of: selectedPhotoItem) { _, newItem in
+                    Task {
+                        if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                            imageData = data
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle("新建事件")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("保存") {
+                        let record = MemoryEventRecord(
+                            title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "重要时刻" : title,
+                            dateString: dateString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "珍藏记录" : dateString,
+                            imageData: imageData
+                        )
+                        onSave(record)
+                        dismiss()
+                    }
+                    .font(.system(size: 15, weight: .bold))
+                }
+            }
+        }
+    }
+}
+
+private struct CreateTicketSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var title = ""
+    @State private var dateString = ""
+    @State private var locationString = ""
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var imageData: Data?
+
+    let onSave: (MemoryTicketRecord) -> Void
+
+    init(onSave: @escaping (MemoryTicketRecord) -> Void) {
+        self.onSave = onSave
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd 周E HH:mm"
+        _dateString = State(initialValue: formatter.string(from: Date()))
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("演出/活动/电影名称")
+                        .font(.system(size: 14, weight: .semibold, design: .serif))
+                    TextField("名称，如：演唱会、阿凡达3", text: $title)
+                        .padding(.horizontal, 14)
+                        .frame(height: 44)
+                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("时间")
+                        .font(.system(size: 14, weight: .semibold, design: .serif))
+                    TextField("时间", text: $dateString)
+                        .padding(.horizontal, 14)
+                        .frame(height: 44)
+                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("地点")
+                        .font(.system(size: 14, weight: .semibold, design: .serif))
+                    TextField("地点，如：体育中心、百老汇影城", text: $locationString)
+                        .padding(.horizontal, 14)
+                        .frame(height: 44)
+                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    HStack {
+                        Image(systemName: "ticket")
+                        Text(imageData == nil ? "选择票根图 (选填)" : "已选择票面图")
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.black.opacity(0.75))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .onChange(of: selectedPhotoItem) { _, newItem in
+                    Task {
+                        if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                            imageData = data
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle("新建纪念票根")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("生成") {
+                        let record = MemoryTicketRecord(
+                            title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "纪念票根" : title,
+                            dateString: dateString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "观演时刻" : dateString,
+                            locationString: locationString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "现场" : locationString,
+                            imageData: imageData
+                        )
+                        onSave(record)
+                        dismiss()
+                    }
+                    .font(.system(size: 15, weight: .bold))
+                }
+            }
+        }
     }
 }

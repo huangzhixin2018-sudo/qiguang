@@ -371,6 +371,21 @@ enum MemoryCategory: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+struct MemoryEventRecord: Identifiable, Codable {
+    var id = UUID()
+    var title: String
+    var dateString: String
+    var imageData: Data? = nil
+}
+
+struct MemoryTicketRecord: Identifiable, Codable {
+    var id = UUID()
+    var title: String
+    var dateString: String
+    var locationString: String
+    var imageData: Data? = nil
+}
+
 struct PersonMemoryPoster: Identifiable, Codable {
     var id = UUID()
     let name: String            // 左侧艺术大字称呼（如 "妈妈"）
@@ -385,6 +400,8 @@ struct PersonMemoryPoster: Identifiable, Codable {
     let mbti: String            // MBTI
     let solarDate: String       // 公历/生日
     let lunarDate: String       // 农历
+    var events: [MemoryEventRecord] = []
+    var tickets: [MemoryTicketRecord] = []
 }
 
 @MainActor
@@ -429,6 +446,20 @@ class MemoryPosterManager: ObservableObject {
     func deletePoster(id: UUID) {
         posters.removeAll { $0.id == id }
         savePosters()
+    }
+
+    func addEventToPoster(id: UUID, event: MemoryEventRecord) {
+        if let index = posters.firstIndex(where: { $0.id == id }) {
+            posters[index].events.append(event)
+            savePosters()
+        }
+    }
+
+    func addTicketToPoster(id: UUID, ticket: MemoryTicketRecord) {
+        if let index = posters.firstIndex(where: { $0.id == id }) {
+            posters[index].tickets.append(ticket)
+            savePosters()
+        }
     }
 
     func updatePosterPhoto(id: UUID, imageData: Data) {
