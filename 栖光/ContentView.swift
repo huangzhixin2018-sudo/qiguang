@@ -1675,16 +1675,8 @@ private struct HardcoverAnnualBookCard: View {
             }
             .frame(maxWidth: .infinity)
 
-            // 3. 左侧 3D 精装书装订压痕线 (Spine Hinge Groove Line)
-            HStack(spacing: 0) {
-                Rectangle()
-                    .fill(Color.black.opacity(0.14))
-                    .frame(width: 1)
-                Rectangle()
-                    .fill(Color.white.opacity(0.35))
-                    .frame(width: 1)
-            }
-            .padding(.leading, 18)
+            HardcoverBookSpine()
+                .frame(width: 24)
         }
         .frame(height: 220)
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -1697,11 +1689,101 @@ private struct HardcoverAnnualBookCard: View {
     }
 }
 
+private struct HardcoverBookSpine: View {
+    private let faceWidth: CGFloat = 12
 
-// MARK: - 支持 4 大主题切换与样板试看的主故事详情页
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                HardcoverSpineFace()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.black.opacity(0.16),
+                                Color.white.opacity(0.16),
+                                Color.black.opacity(0.10),
+                                Color.white.opacity(0.08)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: faceWidth, height: proxy.size.height)
+                    .overlay {
+                        Canvas { context, size in
+                            var threads = Path()
+                            var y: CGFloat = -size.width
+
+                            while y < size.height {
+                                threads.move(to: CGPoint(x: 0, y: y))
+                                threads.addLine(to: CGPoint(x: size.width, y: y + size.width))
+                                y += 2.4
+                            }
+
+                            context.stroke(
+                                threads,
+                                with: .color(Color.white.opacity(0.10)),
+                                lineWidth: 0.35
+                            )
+                        }
+                        .clipShape(HardcoverSpineFace())
+                    }
+
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: 5))
+                    path.addLine(to: CGPoint(x: faceWidth, y: 0))
+                    path.addLine(to: CGPoint(x: faceWidth, y: 5))
+                    path.addLine(to: CGPoint(x: 1, y: 9))
+                    path.closeSubpath()
+                }
+                .fill(Color.white.opacity(0.16))
+
+                Path { path in
+                    let height = proxy.size.height
+                    path.move(to: CGPoint(x: 0, y: height - 5))
+                    path.addLine(to: CGPoint(x: faceWidth, y: height))
+                    path.addLine(to: CGPoint(x: faceWidth, y: height - 5))
+                    path.addLine(to: CGPoint(x: 1, y: height - 9))
+                    path.closeSubpath()
+                }
+                .fill(Color.black.opacity(0.10))
+
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.20),
+                        Color.white.opacity(0.24),
+                        Color.black.opacity(0.06),
+                        Color.clear
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: 8)
+                .offset(x: faceWidth)
+                .shadow(color: .black.opacity(0.12), radius: 2, x: 1, y: 0)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct HardcoverSpineFace: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + 5))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - 5))
+        path.closeSubpath()
+        return path
+    }
+}
+
+
+// MARK: - 精致编辑部杂志画报主故事详情页 (StoryDetailView - Magazine Editorial)
 struct StoryDetailView: View {
     let title: String
-    @State var theme: String
+    @State var theme: String = "magazine"
     @ObservedObject private var dataManager = StoryDataManager.shared
     @State private var isShowingNewEntry = false
 
@@ -1716,22 +1798,12 @@ struct StoryDetailView: View {
     }
 
     var body: some View {
-        Group {
-            switch theme {
-            case "darkroom":
-                StoryDetailDarkroomView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
-            case "polaroid":
-                StoryDetailPolaroidView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
-            case "gallery":
-                StoryDetailGalleryView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
-            case "timeline":
-                StoryDetailTimelineView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
-            case "book":
-                StoryDetailBookView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
-            default: // magazine
-                StoryDetailMagazineView(title: title, dateString: formattedDateString, photos: allPhotos, entries: dataManager.entries)
-            }
-        }
+        StoryDetailMagazineView(
+            title: title,
+            dateString: formattedDateString,
+            photos: allPhotos,
+            entries: dataManager.entries
+        )
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -1745,8 +1817,8 @@ struct StoryDetailView: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(theme == "darkroom" ? Color.white.opacity(0.2) : Color.primary.opacity(0.08), in: Capsule())
-                    .foregroundStyle(theme == "darkroom" ? .white : .primary)
+                    .background(Color.primary.opacity(0.08), in: Capsule())
+                    .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
             }
@@ -1761,15 +1833,10 @@ struct StoryDetailView: View {
                     Text("添加故事")
                         .font(.system(size: 14, weight: .semibold))
                 }
-                .foregroundStyle(theme == "darkroom" ? Color.black : Color.white)
+                .foregroundStyle(.white)
                 .padding(.horizontal, 22)
                 .padding(.vertical, 12)
-                .background(
-                    theme == "darkroom"
-                    ? Color.white
-                    : Color.primary,
-                    in: Capsule()
-                )
+                .background(Color.primary, in: Capsule())
                 .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
             }
             .buttonStyle(.plain)
@@ -1783,8 +1850,7 @@ struct StoryDetailView: View {
     }
 }
 
-
-// MARK: - 主题 1：📖 杂志画报风 (Magazine Editorial) - 原详情页设计
+// MARK: - 📖 杂志画报主视图 (Magazine Editorial Journal View)
 private struct StoryDetailMagazineView: View {
     let title: String
     let dateString: String
@@ -1792,12 +1858,12 @@ private struct StoryDetailMagazineView: View {
     let entries: [StoryDiaryEntry]
 
     @State private var carouselIndex = 0
-    private let timer = Timer.publish(every: 3.0, on: .main, in: .common).autoconnect()
+    private let timer = Timer.publish(every: 3.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                // 1. 顶部轮播画报 (有真实照片用照片，无照片显示精美浅色样板)
+                // 1. 顶部轮播画报
                 ZStack {
                     if !photos.isEmpty {
                         ForEach(photos.indices, id: \.self) { index in
@@ -1820,8 +1886,8 @@ private struct StoryDetailMagazineView: View {
                                 Image(systemName: "magazine.fill")
                                     .font(.system(size: 36))
                                     .foregroundStyle(.secondary)
-                                Text("「杂志画报」样板轮播图")
-                                    .font(.system(size: 14, weight: .medium))
+                                Text("「杂志画报」封面")
+                                    .font(.system(size: 14, weight: .medium, design: .serif))
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -1877,7 +1943,7 @@ private struct StoryDetailMagazineView: View {
                             .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 60)
                 } else {
                     // 浅色样板日记流展示
                     VStack(spacing: 24) {
@@ -1889,14 +1955,14 @@ private struct StoryDetailMagazineView: View {
                                     VStack(spacing: 6) {
                                         Image(systemName: "photo")
                                             .font(.system(size: 28))
-                                        Text("浅色高清照片结构样板 01")
+                                        Text("高清照片结构样板 01")
                                             .font(.system(size: 13))
                                     }
                                     .foregroundStyle(.secondary)
                                 )
 
                             Text("在清晨的光影里漫步，空气里透着清甜的温度。记录下这一刻的静谧与温柔。")
-                                .font(.system(size: 15, weight: .regular))
+                                .font(.system(size: 15, weight: .regular, design: .serif))
                                 .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
                                 .lineSpacing(6)
                                 .padding(20)
@@ -1912,14 +1978,14 @@ private struct StoryDetailMagazineView: View {
                                     VStack(spacing: 6) {
                                         Image(systemName: "photo")
                                             .font(.system(size: 28))
-                                        Text("浅色高清照片结构样板 02")
+                                        Text("高清照片结构样板 02")
                                             .font(.system(size: 13))
                                     }
                                     .foregroundStyle(.secondary)
                                 )
 
                             Text("傍晚时分的海边，夕阳把云朵染成了温暖的烧陶橘。生活中的闪光时刻。")
-                                .font(.system(size: 15, weight: .regular))
+                                .font(.system(size: 15, weight: .regular, design: .serif))
                                 .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
                                 .lineSpacing(6)
                                 .padding(20)
@@ -1927,59 +1993,12 @@ private struct StoryDetailMagazineView: View {
                         }
                         .padding(.horizontal, 16)
                     }
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 60)
                 }
             }
-            .padding(.top, 50)
+            .padding(.top, 10)
         }
         .background(Color(.systemBackground))
-    }
-}
-
-// MARK: - 主题 2：🎞️ 宝丽来拍立得风 (Polaroid Vintage)
-private struct StoryDetailPolaroidView: View {
-    let title: String
-    let dateString: String
-    let photos: [UIImage]
-    let entries: [StoryDiaryEntry]
-
-    var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 24) {
-                // 复古宝丽来 Header
-                VStack(spacing: 6) {
-                    Text("MEMORIES · POLAROID")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Color(red: 0.70, green: 0.50, blue: 0.35))
-                        .tracking(2)
-
-                    Text(title)
-                        .font(.system(size: 28, weight: .bold, design: .serif))
-                        .foregroundStyle(Color(red: 0.25, green: 0.20, blue: 0.18))
-
-                    Text(dateString)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 64)
-
-                // 宝丽来相纸卡片列表（相纸白框 + 倾斜感）
-                VStack(spacing: 28) {
-                    if !photos.isEmpty {
-                        ForEach(photos.indices, id: \.self) { idx in
-                            PolaroidCardItem(image: photos[idx], caption: "POLAROID MEMORY #\(idx + 1)", rotateDegree: idx % 2 == 0 ? -1.5 : 1.5)
-                        }
-                    } else {
-                        // 样板试看
-                        PolaroidCardPlaceholder(title: "拍立得照片样板 01", caption: "长白山雪景 · 2026.08.05", rotateDegree: -1.8)
-                        PolaroidCardPlaceholder(title: "拍立得照片样板 02", caption: "海边的晚霞与汽水", rotateDegree: 1.8)
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
-            }
-        }
-        .background(Color(red: 0.96, green: 0.94, blue: 0.91)) // 宝丽来暖黄复古纸感背景
     }
 }
 
