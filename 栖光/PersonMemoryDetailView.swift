@@ -476,12 +476,12 @@ private struct CelebrityMemoryDetailContentView: View {
                         switch selectedSection {
                         case .record:
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
-                                DetailStatBlockTile(number: "19", label: "点赞")
-                                DetailStatBlockTile(number: "203", label: "做同款")
-                                DetailStatBlockTile(number: "8年3个月", label: "相识时长")
-                                DetailStatBlockTile(number: "56次", label: "记录打卡")
-                                DetailStatBlockTile(number: "10月24日", label: "生日")
-                                DetailStatColumnTile(number: "ENFP", label: "MBTI 人格")
+                                DetailStatBlockTile(number: poster.constellation.isEmpty ? "双子座" : poster.constellation, label: "星座")
+                                DetailStatBlockTile(number: poster.zodiac.isEmpty ? "肖龙" : poster.zodiac, label: "生肖")
+                                DetailStatBlockTile(number: poster.solarDate.isEmpty ? "专属记录" : poster.solarDate, label: "公历生日")
+                                DetailStatBlockTile(number: poster.lunarDate.isEmpty ? "相伴时光" : poster.lunarDate, label: "农历生日")
+                                DetailStatBlockTile(number: poster.category.rawValue, label: "画报类别")
+                                DetailStatColumnTile(number: poster.mbti.isEmpty ? "ENFP" : poster.mbti, label: "MBTI 人格")
                             }
                         case .event:
                             CelebrityEventSection(poster: poster)
@@ -507,97 +507,78 @@ private struct CelebrityMemoryDetailContentView: View {
     }
 }
 
-// MARK: - 明星画报：大事件节点模块 (纯正事件与大时间排版)
-private struct CelebrityEventItem: Identifiable {
-    let id = UUID()
-    let title: String
-    let timeAgo: String
-    let exactDate: String
-}
-
+// MARK: - 画报：事件节点模块 (基于真实画报数据渲染)
 private struct CelebrityEventSection: View {
     let poster: PersonMemoryPoster
 
-    // 大事件数据（只包含：时间跨度、具体日期 2026年X月X日、事件主题，彻底去除地点）
-    private var events: [CelebrityEventItem] {
-        return [
-            CelebrityEventItem(
-                title: "第一次去看演唱会",
-                timeAgo: "1个月，4天之前",
-                exactDate: "2026年07月05日"
-            ),
-            CelebrityEventItem(
-                title: "开心",
-                timeAgo: "1个月，4天之前",
-                exactDate: "2026年07月05日"
-            ),
-            CelebrityEventItem(
-                title: "第一次拿到亲笔签名",
-                timeAgo: "8个月，10天之前",
-                exactDate: "2025年11月29日"
-            )
-        ]
-    }
-
     var body: some View {
-        VStack(spacing: 20) {
-            ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
-                ZStack(alignment: .bottomLeading) {
-                    // 背景图 / 极简质感背景
-                    Group {
-                        if let data = poster.coverImageData, let uiImage = UIImage(data: data) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFill()
-                        } else {
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.18, green: 0.16, blue: 0.15),
-                                    Color(red: 0.28, green: 0.25, blue: 0.22)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        }
+        if poster.avatarImageData == nil && poster.coverImageData == nil {
+            VStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.black.opacity(0.04))
+                        .frame(width: 64, height: 64)
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: 26, weight: .medium))
+                        .foregroundStyle(Color.gray)
+                }
+                Text("暂无记录事件")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.gray)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 180)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        } else {
+            ZStack(alignment: .bottomLeading) {
+                Group {
+                    if let data = poster.coverImageData ?? poster.avatarImageData, let uiImage = UIImage(data: data) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.18, green: 0.16, blue: 0.15),
+                                Color(red: 0.28, green: 0.25, blue: 0.22)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     }
-                    .frame(height: 210)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-
-                    // 暗色深度渐变遮罩 (保证大字与文本朗读绝对清晰)
-                    LinearGradient(
-                        stops: [
-                            .init(color: Color.black.opacity(0.05), location: 0.0),
-                            .init(color: Color.black.opacity(0.40), location: 0.45),
-                            .init(color: Color.black.opacity(0.88), location: 1.0)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-
-
-
-                    // 编辑部高质感排版：小字优雅轻量时间标签 + 适中精致衬线主标题
-                    VStack(alignment: .leading, spacing: 6) {
-                        // 1. 顶部辅助时间：轻盈小巧 (13pt medium tracking)
-                        Text(event.exactDate)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .tracking(0.6)
-                            .foregroundStyle(Color.white.opacity(0.82))
-
-                        // 2. 核心事件标题：适中清晰、有分量的编辑部衬线体 (26pt bold serif)
-                        Text(event.title)
-                            .font(.system(size: 26, weight: .bold, design: .serif))
-                            .foregroundStyle(Color.white)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.85)
-                    }
-                    .padding(22)
                 }
                 .frame(height: 210)
-                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+                LinearGradient(
+                    stops: [
+                        .init(color: Color.black.opacity(0.05), location: 0.0),
+                        .init(color: Color.black.opacity(0.40), location: 0.45),
+                        .init(color: Color.black.opacity(0.88), location: 1.0)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(poster.solarDate.isEmpty ? "创建专属记忆" : poster.solarDate)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .tracking(0.6)
+                        .foregroundStyle(Color.white.opacity(0.82))
+
+                    Text(poster.cardTitle.isEmpty ? poster.name : poster.cardTitle)
+                        .font(.system(size: 26, weight: .bold, design: .serif))
+                        .foregroundStyle(Color.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                }
+                .padding(22)
             }
+            .frame(height: 210)
+            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
         }
     }
 }
@@ -859,16 +840,16 @@ private struct ConcertTicketStubCard: View {
     let poster: PersonMemoryPoster
 
     private var eventTitle: String {
-        let name = poster.cardTitle.isEmpty ? "薛之谦" : poster.cardTitle
-        return "\(name)“万兽之王”巡回演唱会-太原站"
+        let name = poster.cardTitle.isEmpty ? poster.name : poster.cardTitle
+        return "\(name) 专属纪念票根"
     }
 
     private var eventDate: String {
-        "2026-05-03 周日 19:30"
+        poster.solarDate.isEmpty ? "珍藏时刻" : poster.solarDate
     }
 
     private var eventLocation: String {
-        "太原 | 山西体育中心体育场"
+        poster.tagline.isEmpty ? "栖光回忆记录" : poster.tagline
     }
 
     var body: some View {
