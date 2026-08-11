@@ -527,7 +527,13 @@ struct MemoriesView: View {
                     .padding(.bottom, 12)
 
                     if manager.posters.isEmpty {
-                        Spacer()
+                        VStack(spacing: 0) {
+                            Spacer()
+                            Text("空空如也，快去创建吧")
+                                .font(.system(size: 15, weight: .medium, design: .serif))
+                                .foregroundStyle(Color(red: 0.60, green: 0.55, blue: 0.50))
+                            Spacer()
+                        }
                     } else {
                         // 3. 双列莫兰迪圆窗肖像画报卡 (Morandi Circle Portrait Cards)
                         ScrollView(showsIndicators: false) {
