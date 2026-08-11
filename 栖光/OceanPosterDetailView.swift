@@ -19,8 +19,10 @@ struct OceanPosterDetailView: View {
     @State private var overlayText = ""
     @State private var stickerName: String?
     @State private var extractedPrimaryColor: ExtractedColorItem?
+    @State private var customBackgroundColor: Color?
     @State private var isShowingTextEditor = false
     @State private var isShowingStickerPicker = false
+    @State private var isShowingColorPicker = false
     @State private var saveMessage: String?
 
     private var isEditing: Bool { selectedImage != nil }
@@ -71,6 +73,13 @@ struct OceanPosterDetailView: View {
         .sheet(isPresented: $isShowingStickerPicker) {
             TemplateStickerPicker(selectedSticker: $stickerName)
                 .presentationDetents([.height(230)])
+        }
+        .sheet(isPresented: $isShowingColorPicker) {
+            TemplateColorPicker(
+                selectedColor: $customBackgroundColor,
+                extractedColor: extractedPrimaryColor?.color
+            )
+            .presentationDetents([.height(260)])
         }
         .alert(saveMessage ?? "", isPresented: Binding(
             get: { saveMessage != nil },
@@ -196,10 +205,15 @@ struct OceanPosterDetailView: View {
                     isShowingStickerPicker = true
                 }
 
-                TemplateColorToolLabel(
-                    color: activeBackgroundColor,
-                    hexString: activeBackgroundHex
-                )
+                Button {
+                    isShowingColorPicker = true
+                } label: {
+                    TemplateColorToolLabel(
+                        color: activeBackgroundColor,
+                        hexString: activeBackgroundHex
+                    )
+                }
+                .buttonStyle(.plain)
 
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                     TemplateToolLabel(title: "媒体", iconName: "photo.badge.plus")
@@ -272,15 +286,21 @@ struct OceanPosterDetailView: View {
     }
 
     private var activeBackgroundColor: Color {
-        extractedPrimaryColor?.color ?? Color(red: 0.10, green: 0.16, blue: 0.11)
+        if let customBackgroundColor {
+            return customBackgroundColor
+        }
+        return extractedPrimaryColor?.color ?? Color(red: 0.10, green: 0.16, blue: 0.11)
     }
 
     private var activeBackgroundHex: String {
-        extractedPrimaryColor?.hexString ?? "#1A291C"
+        if let customBackgroundColor {
+            return customBackgroundColor.toHex()
+        }
+        return extractedPrimaryColor?.hexString ?? "#1A291C"
     }
 
     private var usesDarkForeground: Bool {
-        let color = extractedPrimaryColor?.uiColor ?? UIColor(red: 0.10, green: 0.16, blue: 0.11, alpha: 1)
+        let color = customBackgroundColor.map { UIColor($0) } ?? extractedPrimaryColor?.uiColor ?? UIColor(red: 0.10, green: 0.16, blue: 0.11, alpha: 1)
         var red: CGFloat = 0
         var green: CGFloat = 0
         var blue: CGFloat = 0
@@ -490,6 +510,100 @@ private struct SummerEditorialCanvas: View {
             }
         }
         .aspectRatio(templateRatio, contentMode: .fit)
+    }
+}
+
+private struct TemplateColorPicker: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedColor: Color?
+    let extractedColor: Color?
+
+    private let presetColors: [(name: String, color: Color)] = [
+        ("天青蓝", Color(red: 0.62, green: 0.78, blue: 0.88)),
+        ("燕麦沙", Color(red: 0.85, green: 0.81, blue: 0.75)),
+        ("鼠尾草绿", Color(red: 0.74, green: 0.80, blue: 0.76)),
+        ("陶土粉", Color(red: 0.84, green: 0.75, blue: 0.72)),
+        ("极简墨黑", Color(red: 0.11, green: 0.12, blue: 0.11)),
+        ("奶油纯白", Color(red: 0.96, green: 0.95, blue: 0.93))
+    ]
+
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Text("底色配色方案")
+                    .font(.system(size: 18, weight: .semibold, design: .serif))
+                Spacer()
+                Button("完成") { dismiss() }
+                    .font(.system(size: 15, weight: .semibold))
+            }
+
+            VStack(alignment: .leading, spacing: 14) {
+                if let extractedColor {
+                    Button {
+                        selectedColor = nil
+                    } label: {
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(extractedColor)
+                                .frame(width: 24, height: 24)
+                                .overlay(Circle().stroke(Color.black.opacity(0.1), lineWidth: 1))
+                            Text("照片自动提色 (智能重置)")
+                                .font(.system(size: 14, weight: .medium))
+                            Spacer()
+                            if selectedColor == nil {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Color.primary)
+                            }
+                        }
+                        .padding(12)
+                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(presetColors, id: \.name) { preset in
+                            Button {
+                                selectedColor = preset.color
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Circle()
+                                        .fill(preset.color)
+                                        .frame(width: 40, height: 40)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(selectedColor == preset.color ? Color.primary : Color.black.opacity(0.12), lineWidth: selectedColor == preset.color ? 2 : 1)
+                                        )
+
+                                    Text(preset.name)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(Color.secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(20)
+    }
+}
+
+private extension Color {
+    func toHex() -> String {
+        let uiColor = UIColor(self)
+        var redVal: CGFloat = 0
+        var greenVal: CGFloat = 0
+        var blueVal: CGFloat = 0
+        var alphaVal: CGFloat = 0
+        uiColor.getRed(&redVal, green: &greenVal, blue: &blueVal, alpha: &alphaVal)
+        return String(format: "#%02X%02X%02X", Int(redVal * 255), Int(greenVal * 255), Int(blueVal * 255))
     }
 }
 
