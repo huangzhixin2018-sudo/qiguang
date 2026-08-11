@@ -991,11 +991,15 @@ struct StoriesView: View {
     @ObservedObject private var dataManager = StoryDataManager.shared
     @State private var isShowingNewCollection = false
 
+    // 栖光全屏纯色纸质背景 (Pure Warm Studio Canvas)
+    private let pageBackgroundColor = Color(red: 0.95, green: 0.94, blue: 0.91)
+
     var body: some View {
         NavigationStack {
             ZStack {
-                // 1. 艺术点阵网格画板背景（与「生命里的光」回忆首页统一）
-                DotGridBackground()
+                // 1. 纯色优雅纸艺画板背景
+                pageBackgroundColor
+                    .ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     // 2. 顶部「故事」标题 + 右侧新建按键
@@ -1020,7 +1024,7 @@ struct StoriesView: View {
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 14)
-                    .padding(.bottom, 0)
+                    .padding(.bottom, 12)
 
                     if dataManager.collections.isEmpty {
                         VStack(spacing: 16) {
@@ -1058,13 +1062,13 @@ struct StoriesView: View {
                         ScrollView(showsIndicators: false) {
                             LazyVGrid(
                                 columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                                spacing: 12
+                                spacing: 14
                             ) {
                                 ForEach(Array(dataManager.collections.enumerated()), id: \.element.id) { index, item in
                                     StoryCollectionCardItem(collection: item, index: index)
                                 }
                             }
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 16)
                             .padding(.top, 4)
                             .padding(.bottom, 30)
                         }
@@ -1080,6 +1084,7 @@ struct StoriesView: View {
         }
     }
 }
+
 private struct StoryCollectionCardItem: View {
     let collection: StoryCollectionModel
     var index: Int = 0
@@ -1098,8 +1103,8 @@ private struct StoryCollectionCardItem: View {
                 .toolbar(.hidden, for: .tabBar)
                 .toolbarVisibility(.hidden, for: .tabBar)
         } label: {
-            StackedEnvelopeFolderView(title: collection.title, theme: collection.theme, image: coverImage, index: index)
-                .frame(height: 205)
+            UnfoldBreakoutCardView(title: collection.title, image: coverImage, index: index)
+                .frame(height: 104)
         }
         .buttonStyle(.plain)
         .contextMenu {
@@ -1109,6 +1114,101 @@ private struct StoryCollectionCardItem: View {
                 Label("删除故事集", systemImage: "trash")
             }
         }
+    }
+}
+
+// MARK: - 🎨 Unfold 招牌美学：横向卡片 + 右侧精致破框倾斜相纸
+private struct UnfoldBreakoutCardView: View {
+    let title: String
+    let image: UIImage?
+    let index: Int
+
+    // 🎨 视觉色彩总监精调：低饱和高雅莫兰迪特种纸套色系（高亮度与纯度统一，双列平铺极具韵律感）
+    private let cardBackgrounds: [Color] = [
+        Color(red: 0.91, green: 0.86, blue: 0.81), // 暖燕麦 (Warm Oat Sand)
+        Color(red: 0.82, green: 0.86, blue: 0.81), // 鼠尾草雾绿 (Sage Fog Olive)
+        Color(red: 0.89, green: 0.82, blue: 0.79), // 柔淡陶土粉 (Soft Clay Rose)
+        Color(red: 0.81, green: 0.85, blue: 0.89), // 暮霭烟熏蓝 (Muted Slate Sky)
+        Color(red: 0.85, green: 0.82, blue: 0.87), // 冷香薰淡紫 (Quiet Heather Lavender)
+        Color(red: 0.80, green: 0.86, blue: 0.84)  // 海盐淡青灰 (Seafoam Linen)
+    ]
+
+    private var rotationAngle: Double {
+        let angles: [Double] = [-5.0, 4.5, -4.0, 5.5]
+        return angles[index % angles.count]
+    }
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            // 1. 底层圆角柔和特种纸底板
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(cardBackgrounds[index % cardBackgrounds.count])
+                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.black.opacity(0.04), lineWidth: 1)
+                )
+
+            // 2. 内容层：左深色主标题 + 右侧精致小相纸
+            HStack(spacing: 0) {
+                // 左侧纯中文主标题 (深炭黑衬线体，阅读质感极佳)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .bold, design: .serif))
+                        .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.16))
+                        .lineSpacing(3)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                .padding(.leading, 14)
+                .padding(.trailing, 6)
+
+                Spacer(minLength: 0)
+
+                // 右侧精致缩小版 3D 破框浮动相纸 (58pt x 76pt)
+                ZStack {
+                    if let image = image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 58, height: 76)
+                            .clipped()
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .stroke(Color.white, lineWidth: 2.0)
+                            )
+                            .shadow(color: .black.opacity(0.18), radius: 6, x: 2, y: 3)
+                            .rotationEffect(.degrees(rotationAngle))
+                    } else {
+                        // 预设精致白边胶片纸
+                        ZStack {
+                            Color(red: 0.98, green: 0.97, blue: 0.95)
+                            VStack(spacing: 3) {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                    .font(.system(size: 15, weight: .light))
+                                    .foregroundStyle(Color.black.opacity(0.35))
+                                Text("栖光")
+                                    .font(.system(size: 8.5, weight: .bold, design: .serif))
+                                    .foregroundStyle(Color.black.opacity(0.40))
+                            }
+                        }
+                        .frame(width: 58, height: 76)
+                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .stroke(Color.white, lineWidth: 2.0)
+                        )
+                        .shadow(color: .black.opacity(0.16), radius: 6, x: 2, y: 3)
+                        .rotationEffect(.degrees(rotationAngle))
+                    }
+                }
+                .padding(.trailing, 8)
+                .offset(x: 2)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
