@@ -102,7 +102,7 @@ struct HomeView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 0) {
-                        // 1. 顶部 Header (左侧 hello，右侧云朵按钮)
+                        // 1. 顶部 Header (左侧 hello，右侧云朵装饰)
                         HStack(alignment: .center) {
                             Text("hello")
                                 .font(.system(size: 48, weight: .bold, design: .serif))
@@ -111,21 +111,18 @@ struct HomeView: View {
 
                             Spacer()
 
-                            Button {
-                            } label: {
-                                Image(systemName: "cloud.fill")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .symbolRenderingMode(.hierarchical)
-                                    .foregroundStyle(Color.primary.opacity(0.72))
-                                    .frame(width: 44, height: 44)
-                                    .background(.ultraThinMaterial, in: Circle())
-                                    .overlay {
-                                        Circle()
-                                            .stroke(Color.white.opacity(0.65), lineWidth: 1)
-                                    }
-                                    .shadow(color: .black.opacity(0.04), radius: 12, x: 0, y: 6)
-                            }
-                            .buttonStyle(.plain)
+                            Image(systemName: "cloud.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(Color.primary.opacity(0.72))
+                                .frame(width: 44, height: 44)
+                                .background(.ultraThinMaterial, in: Circle())
+                                .overlay {
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.65), lineWidth: 1)
+                                }
+                                .shadow(color: .black.opacity(0.04), radius: 12, x: 0, y: 6)
+                                .accessibilityHidden(true)
                         }
                         .padding(.horizontal, 24)
                         .padding(.top, 20)
@@ -2141,6 +2138,7 @@ private struct NewDiaryEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var entryDate = Date()
     @State private var note = ""
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var selectedImages: [UIImage] = []
     @FocusState private var isNoteFocused: Bool
     let onSave: (StoryDiaryEntry) -> Void
@@ -2175,13 +2173,16 @@ private struct NewDiaryEntrySheet: View {
                                     .clipped()
                             }
 
-                            Button {
-                            } label: {
+                            PhotosPicker(
+                                selection: $selectedPhotoItems,
+                                maxSelectionCount: 9,
+                                matching: .images
+                            ) {
                                 VStack(spacing: 8) {
                                     Image(systemName: "photo")
                                         .font(.system(size: 25, weight: .regular))
 
-                                    Text("照片稍后添加")
+                                    Text("添加照片")
                                         .font(.system(size: 15, weight: .semibold))
                                 }
                                 .foregroundStyle(.secondary)
@@ -2189,7 +2190,18 @@ private struct NewDiaryEntrySheet: View {
                                 .frame(height: 112)
                                 .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
-                            .buttonStyle(.plain)
+                            .onChange(of: selectedPhotoItems) { _, items in
+                                Task {
+                                    var loadedImages: [UIImage] = []
+                                    for item in items {
+                                        if let data = try? await item.loadTransferable(type: Data.self),
+                                           let image = UIImage(data: data) {
+                                            loadedImages.append(image)
+                                        }
+                                    }
+                                    selectedImages = loadedImages
+                                }
+                            }
                         }
                     }
 
