@@ -93,11 +93,9 @@ struct HomeView: View {
     ]
 
     private let shortcuts: [HomeShortcut] = [
-        .oceanPoster,
         .toneCard,
         .darkroom,
         .memoryCalendar,
-        .frameTemplates,
         .yearAlbum
     ]
 
@@ -208,15 +206,7 @@ struct HomeView: View {
 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(alignment: .top, spacing: 14) {
-                                        // 模板 1：单图成品预览
-                                        NavigationLink {
-                                            OceanPosterDetailView(title: "Summer Editorial")
-                                        } label: {
-                                            singlePhotoTemplateCard
-                                        }
-                                        .buttonStyle(.plain)
-
-                                        // 模板 2：蓝色双色调网屏效果
+                                        // 模板：蓝色双色调网屏效果
                                         NavigationLink {
                                             BlueprintGridEffectView()
                                         } label: {
@@ -241,13 +231,6 @@ struct HomeView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
         }
-    }
-
-    private var singlePhotoTemplateCard: some View {
-        singleTemplatePreview(
-            assetName: "HomeSingle01",
-            accessibilityLabel: "单图模板一"
-        )
     }
 
     private var blueprintGridTemplateCard: some View {
@@ -277,44 +260,36 @@ struct HomeView: View {
 }
 
 private enum HomeShortcut: Identifiable {
-    case oceanPoster
     case toneCard
     case darkroom
     case memoryCalendar
-    case frameTemplates
     case yearAlbum
 
     var id: String { title }
 
     var title: String {
         switch self {
-        case .oceanPoster: return "海洋光影"
         case .toneCard: return "取色卡片"
         case .darkroom: return "底片灯箱"
         case .memoryCalendar: return "回忆日历"
-        case .frameTemplates: return "相框模板"
         case .yearAlbum: return "年度相册"
         }
     }
 
     var iconName: String {
         switch self {
-        case .oceanPoster: return "sun.horizon.fill"
         case .toneCard: return "paintpalette.fill"
         case .darkroom: return "film.stack"
         case .memoryCalendar: return "calendar"
-        case .frameTemplates: return "photo.artframe"
         case .yearAlbum: return "archivebox"
         }
     }
 
     var color: Color {
         switch self {
-        case .oceanPoster: return Color(red: 0.20, green: 0.55, blue: 0.65)
         case .toneCard: return Color(red: 0.52, green: 0.44, blue: 0.50)
         case .darkroom: return Color(red: 0.59, green: 0.42, blue: 0.38)
         case .memoryCalendar: return Color(red: 0.55, green: 0.50, blue: 0.36)
-        case .frameTemplates: return Color(red: 0.37, green: 0.50, blue: 0.42)
         case .yearAlbum: return Color(red: 0.58, green: 0.44, blue: 0.35)
         }
     }
@@ -322,16 +297,12 @@ private enum HomeShortcut: Identifiable {
     @ViewBuilder
     var destination: some View {
         switch self {
-        case .oceanPoster:
-            OceanPosterDetailView()
         case .toneCard:
             PhotoToneCardView()
         case .darkroom:
             DarkroomLightboxView()
         case .memoryCalendar:
             TimeCapsuleView()
-        case .frameTemplates:
-            LightSpectrumView()
         case .yearAlbum:
             YearsOrganizerView()
         }
