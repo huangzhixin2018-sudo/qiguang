@@ -10,7 +10,7 @@ import Photos
 struct OceanPosterDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
-    var title: String = "Summer Editorial"
+    var title: String = "夏日画报"
 
     @State private var isFavorite = false
     @State private var selectedPhotoItem: PhotosPickerItem?
@@ -18,10 +18,9 @@ struct OceanPosterDetailView: View {
     @State private var isLoadingPhoto = false
     @State private var overlayText = ""
     @State private var stickerName: String?
-    @State private var backgroundStyle: TemplateBackgroundStyle = .forest
+    @State private var extractedPrimaryColor: ExtractedColorItem?
     @State private var isShowingTextEditor = false
     @State private var isShowingStickerPicker = false
-    @State private var isShowingBackgroundPicker = false
     @State private var saveMessage: String?
 
     private var isEditing: Bool { selectedImage != nil }
@@ -35,7 +34,9 @@ struct OceanPosterDetailView: View {
                     if let selectedImage {
                         SummerEditorialCanvas(
                             image: selectedImage,
-                            backgroundStyle: backgroundStyle,
+                            backgroundColor: activeBackgroundColor,
+                            backgroundHex: activeBackgroundHex,
+                            usesDarkForeground: usesDarkForeground,
                             overlayText: overlayText,
                             stickerName: stickerName
                         )
@@ -70,10 +71,6 @@ struct OceanPosterDetailView: View {
         .sheet(isPresented: $isShowingStickerPicker) {
             TemplateStickerPicker(selectedSticker: $stickerName)
                 .presentationDetents([.height(230)])
-        }
-        .sheet(isPresented: $isShowingBackgroundPicker) {
-            TemplateBackgroundPicker(selection: $backgroundStyle)
-                .presentationDetents([.height(210)])
         }
         .alert(saveMessage ?? "", isPresented: Binding(
             get: { saveMessage != nil },
@@ -199,9 +196,10 @@ struct OceanPosterDetailView: View {
                     isShowingStickerPicker = true
                 }
 
-                TemplateToolButton(title: "背景", iconName: "drop") {
-                    isShowingBackgroundPicker = true
-                }
+                TemplateColorToolLabel(
+                    color: activeBackgroundColor,
+                    hexString: activeBackgroundHex
+                )
 
                 PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                     TemplateToolLabel(title: "媒体", iconName: "photo.badge.plus")
@@ -230,8 +228,11 @@ struct OceanPosterDetailView: View {
             return
         }
 
+        let primaryColor = await ColorExtractor.extractPalette(from: image, count: 1).first
+
         withAnimation(.easeOut(duration: 0.2)) {
             selectedImage = image
+            extractedPrimaryColor = primaryColor
         }
     }
 
@@ -241,7 +242,9 @@ struct OceanPosterDetailView: View {
 
         let exportView = SummerEditorialCanvas(
             image: selectedImage,
-            backgroundStyle: backgroundStyle,
+            backgroundColor: activeBackgroundColor,
+            backgroundHex: activeBackgroundHex,
+            usesDarkForeground: usesDarkForeground,
             overlayText: overlayText,
             stickerName: stickerName
         )
@@ -266,6 +269,24 @@ struct OceanPosterDetailView: View {
                 saveMessage = "已保存到相册"
             }
         }
+    }
+
+    private var activeBackgroundColor: Color {
+        extractedPrimaryColor?.color ?? Color(red: 0.10, green: 0.16, blue: 0.11)
+    }
+
+    private var activeBackgroundHex: String {
+        extractedPrimaryColor?.hexString ?? "#1A291C"
+    }
+
+    private var usesDarkForeground: Bool {
+        let color = extractedPrimaryColor?.uiColor ?? UIColor(red: 0.10, green: 0.16, blue: 0.11, alpha: 1)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return red * 0.299 + green * 0.587 + blue * 0.114 > 0.66
     }
 }
 
@@ -300,76 +321,27 @@ private struct TemplateToolLabel: View {
     }
 }
 
-private enum TemplateBackgroundStyle: String, CaseIterable, Identifiable {
-    case forest
-    case charcoal
-    case burgundy
-    case mist
-
-    var id: String { rawValue }
-
-    var color: Color {
-        switch self {
-        case .forest: return Color(red: 0.10, green: 0.16, blue: 0.11)
-        case .charcoal: return Color(red: 0.12, green: 0.12, blue: 0.13)
-        case .burgundy: return Color(red: 0.24, green: 0.10, blue: 0.12)
-        case .mist: return Color(red: 0.50, green: 0.57, blue: 0.56)
-        }
-    }
-
-    var title: String {
-        switch self {
-        case .forest: return "深林"
-        case .charcoal: return "炭黑"
-        case .burgundy: return "酒红"
-        case .mist: return "雾青"
-        }
-    }
-}
-
-private struct TemplateBackgroundPicker: View {
-    @Environment(\.dismiss) private var dismiss
-    @Binding var selection: TemplateBackgroundStyle
+private struct TemplateColorToolLabel: View {
+    let color: Color
+    let hexString: String
 
     var body: some View {
-        VStack(spacing: 22) {
-            HStack {
-                Text("背景")
-                    .font(.system(size: 18, weight: .semibold))
-                Spacer()
-                Button("完成") { dismiss() }
-                    .font(.system(size: 15, weight: .semibold))
-            }
-
-            HStack(spacing: 20) {
-                ForEach(TemplateBackgroundStyle.allCases) { style in
-                    Button {
-                        selection = style
-                    } label: {
-                        VStack(spacing: 8) {
-                            Circle()
-                                .fill(style.color)
-                                .frame(width: 48, height: 48)
-                                .overlay {
-                                    if selection == style {
-                                        Circle()
-                                            .stroke(Color.primary, lineWidth: 2)
-                                            .padding(-4)
-                                    }
-                                }
-
-                            Text(style.title)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(.primary)
-                        }
-                    }
-                    .buttonStyle(.plain)
+        VStack(spacing: 8) {
+            Circle()
+                .fill(color)
+                .frame(width: 28, height: 28)
+                .overlay {
+                    Circle()
+                        .stroke(Color.black.opacity(0.12), lineWidth: 1)
                 }
-            }
 
-            Spacer()
+            Text("颜色")
+                .font(.system(size: 14, weight: .medium))
         }
-        .padding(20)
+        .foregroundStyle(.black)
+        .frame(width: 84, height: 76)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .accessibilityLabel("照片主色 \(hexString)")
     }
 }
 
@@ -450,7 +422,9 @@ private struct TemplateStickerPicker: View {
 
 private struct SummerEditorialCanvas: View {
     let image: UIImage
-    let backgroundStyle: TemplateBackgroundStyle
+    let backgroundColor: Color
+    let backgroundHex: String
+    let usesDarkForeground: Bool
     let overlayText: String
     let stickerName: String?
 
@@ -463,7 +437,7 @@ private struct SummerEditorialCanvas: View {
 
             VStack(spacing: 0) {
                 ZStack {
-                    backgroundStyle.color
+                    backgroundColor
 
                     VStack(spacing: 18) {
                         Image(uiImage: image)
@@ -472,9 +446,9 @@ private struct SummerEditorialCanvas: View {
                             .frame(width: width * 0.45, height: width * 0.34)
                             .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
 
-                        Text("#A2C9D8")
+                        Text(backgroundHex)
                             .font(.system(size: 13, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(usesDarkForeground ? Color.black.opacity(0.72) : Color.white)
                     }
                 }
                 .frame(height: width * topSectionRatio)

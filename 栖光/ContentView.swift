@@ -206,7 +206,7 @@ struct HomeView: View {
                                     HStack(alignment: .top, spacing: 14) {
                                         // 模板 1：海洋光影画报
                                         NavigationLink {
-                                            OceanPosterDetailView(title: "Summer Editorial")
+                                            OceanPosterDetailView(title: "夏日画报")
                                         } label: {
                                             singlePhotoTemplateCard
                                         }
