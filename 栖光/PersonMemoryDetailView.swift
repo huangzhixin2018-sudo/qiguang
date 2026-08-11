@@ -502,13 +502,12 @@ private struct CelebrityMemoryDetailContentView: View {
                     Group {
                         switch selectedSection {
                         case .record:
+                            let photoCount = (poster.avatarImageData != nil ? 1 : 0) + (poster.coverImageData != nil && poster.coverImageData != poster.avatarImageData ? 1 : 0)
+                            let videoCount = poster.videoFileName != nil ? 1 : 0
+
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
-                                DetailStatBlockTile(number: poster.constellation.isEmpty ? "双子座" : poster.constellation, label: "星座")
-                                DetailStatBlockTile(number: poster.zodiac.isEmpty ? "肖龙" : poster.zodiac, label: "生肖")
-                                DetailStatBlockTile(number: poster.solarDate.isEmpty ? "专属记录" : poster.solarDate, label: "公历生日")
-                                DetailStatBlockTile(number: poster.lunarDate.isEmpty ? "相伴时光" : poster.lunarDate, label: "农历生日")
-                                DetailStatBlockTile(number: poster.category.rawValue, label: "画报类别")
-                                DetailStatColumnTile(number: poster.mbti.isEmpty ? "ENFP" : poster.mbti, label: "MBTI 人格")
+                                DetailStatBlockTile(number: "\(photoCount) 张", label: "照片数量")
+                                DetailStatBlockTile(number: "\(videoCount) 个", label: "视频数量")
                             }
                         case .event:
                             CelebrityEventSection(poster: poster, onAddEvent: onAddEvent)
