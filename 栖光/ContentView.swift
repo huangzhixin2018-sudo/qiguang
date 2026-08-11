@@ -16,7 +16,7 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
-                    Label("首页", systemImage: "house")
+                    Label("首页", systemImage: "sparkles")
                 }
                 .tag(0)
 
@@ -28,7 +28,7 @@ struct ContentView: View {
 
             StoriesView()
                 .tabItem {
-                    Label("故事", systemImage: "book")
+                    Label("故事", systemImage: "square.stack")
                 }
                 .tag(2)
 
