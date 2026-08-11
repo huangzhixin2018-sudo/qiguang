@@ -346,7 +346,7 @@ enum MemoryCategory: String, CaseIterable, Identifiable, Codable {
     case self_category = "自己"
     case pet = "宠物"
     case friend = "朋友"
-    case celebrity = "明星"
+    case celebrity = "偶像"
     
     var id: String { rawValue }
     
