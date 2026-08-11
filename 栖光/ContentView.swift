@@ -94,7 +94,6 @@ struct HomeView: View {
 
     private let shortcuts: [HomeShortcut] = [
         .toneCard,
-        .memoryCalendar,
         .yearAlbum
     ]
 
@@ -205,7 +204,15 @@ struct HomeView: View {
 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(alignment: .top, spacing: 14) {
-                                        // 模板：蓝色双色调网屏效果
+                                        // 模板 1：海洋光影画报
+                                        NavigationLink {
+                                            OceanPosterDetailView(title: "Summer Editorial")
+                                        } label: {
+                                            singlePhotoTemplateCard
+                                        }
+                                        .buttonStyle(.plain)
+
+                                        // 模板 2：蓝色双色调网屏效果
                                         NavigationLink {
                                             BlueprintGridEffectView()
                                         } label: {
@@ -230,6 +237,13 @@ struct HomeView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
         }
+    }
+
+    private var singlePhotoTemplateCard: some View {
+        singleTemplatePreview(
+            assetName: "HomeSingle01",
+            accessibilityLabel: "单图模板一"
+        )
     }
 
     private var blueprintGridTemplateCard: some View {
@@ -260,7 +274,6 @@ struct HomeView: View {
 
 private enum HomeShortcut: Identifiable {
     case toneCard
-    case memoryCalendar
     case yearAlbum
 
     var id: String { title }
@@ -268,7 +281,6 @@ private enum HomeShortcut: Identifiable {
     var title: String {
         switch self {
         case .toneCard: return "取色卡片"
-        case .memoryCalendar: return "回忆日历"
         case .yearAlbum: return "年度相册"
         }
     }
@@ -276,7 +288,6 @@ private enum HomeShortcut: Identifiable {
     var iconName: String {
         switch self {
         case .toneCard: return "paintpalette.fill"
-        case .memoryCalendar: return "calendar"
         case .yearAlbum: return "archivebox"
         }
     }
@@ -284,7 +295,6 @@ private enum HomeShortcut: Identifiable {
     var color: Color {
         switch self {
         case .toneCard: return Color(red: 0.52, green: 0.44, blue: 0.50)
-        case .memoryCalendar: return Color(red: 0.55, green: 0.50, blue: 0.36)
         case .yearAlbum: return Color(red: 0.58, green: 0.44, blue: 0.35)
         }
     }
@@ -294,8 +304,6 @@ private enum HomeShortcut: Identifiable {
         switch self {
         case .toneCard:
             PhotoToneCardView()
-        case .memoryCalendar:
-            TimeCapsuleView()
         case .yearAlbum:
             YearsOrganizerView()
         }
