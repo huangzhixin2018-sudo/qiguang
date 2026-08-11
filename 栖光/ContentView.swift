@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 import PhotosUI
+import Photos
 import StoreKit
 
 struct ContentView: View {
@@ -1444,11 +1445,11 @@ private struct NewCollectionSheet: View {
 
 // MARK: - 独立年度照片整理页：YearsOrganizerView (精装大书特刊美学)
 struct YearsOrganizerView: View {
-    private let sampleYears: [(year: String, photoCount: Int, videoCount: Int, color: Color)] = [
-        ("2026", 5, 2, Color(red: 0.25, green: 0.36, blue: 0.28)),
-        ("2025", 18, 4, Color(red: 0.52, green: 0.65, blue: 0.70)),
-        ("2024", 12, 3, Color(red: 0.66, green: 0.62, blue: 0.54)),
-        ("2023", 9, 1, Color(red: 0.55, green: 0.45, blue: 0.44))
+    private let sampleYears: [(year: String, color: Color)] = [
+        ("2026", Color(red: 0.25, green: 0.36, blue: 0.28)),
+        ("2025", Color(red: 0.52, green: 0.65, blue: 0.70)),
+        ("2024", Color(red: 0.66, green: 0.62, blue: 0.54)),
+        ("2023", Color(red: 0.55, green: 0.45, blue: 0.44))
     ]
 
     var body: some View {
@@ -1492,25 +1493,194 @@ struct YearsOrganizerView: View {
     }
 }
 
-// MARK: - 某一年份的照片记忆放映机：YearDetailView
+// MARK: - 某一年份的照片放映网格：YearDetailView (懒加载机制，绝无卡顿)
 private struct YearDetailView: View {
     let year: String
+    @State private var fetchedAssets: [PHAsset] = []
+    @State private var isLoading = true
+    @State private var selectedAsset: PHAsset?
+
+    private var columns: [GridItem] {
+        [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)]
+    }
 
     var body: some View {
-        Color(.systemBackground)
-            .ignoresSafeArea()
-        .navigationTitle(year)
+        ZStack {
+            Color(red: 0.98, green: 0.97, blue: 0.95)
+                .ignoresSafeArea()
+
+            if isLoading {
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("载入中...")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.gray)
+                }
+            } else if fetchedAssets.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.system(size: 32, weight: .light))
+                        .foregroundStyle(Color.gray)
+                    Text("该年份暂无相册照片")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.gray)
+                }
+            } else {
+                ScrollView(showsIndicators: false) {
+                    LazyVGrid(columns: columns, spacing: 4) {
+                        ForEach(fetchedAssets, id: \.localIdentifier) { asset in
+                            LazyAssetGridCell(asset: asset)
+                                .onTapGesture {
+                                    selectedAsset = asset
+                                }
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.top, 8)
+                    .padding(.bottom, 40)
+                }
+            }
+        }
+        .navigationTitle("\(year) 年相册")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbarVisibility(.hidden, for: .tabBar)
         .hideTabBarOnRealDevice()
+        .onAppear {
+            loadYearAssetsAsync()
+        }
+        .sheet(item: $selectedAsset) { asset in
+            AssetPhotoDetailPreview(asset: asset)
+        }
+    }
+
+    private func loadYearAssetsAsync() {
+        Task.detached(priority: .userInitiated) {
+            let options = PHFetchOptions()
+            let calendar = Calendar.current
+            let yearInt = Int(year) ?? 2026
+            var components = DateComponents()
+            components.year = yearInt
+            components.month = 1
+            components.day = 1
+            let startDate = calendar.date(from: components) ?? Date()
+            components.year = yearInt + 1
+            let endDate = calendar.date(from: components) ?? Date()
+
+            options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", startDate as NSDate, endDate as NSDate)
+            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+
+            let result = PHAsset.fetchAssets(with: .image, options: options)
+            var assets: [PHAsset] = []
+            result.enumerateObjects { asset, _, _ in
+                assets.append(asset)
+            }
+
+            await MainActor.run {
+                self.fetchedAssets = assets
+                self.isLoading = false
+            }
+        }
     }
 }
 
-// MARK: - 📖 典藏级精装特刊大书封面 (1:1 还原 Coffee Table Book 物理质感)
+// MARK: - 懒加载单个 Asset 缩略图单元格 (屏幕划入时按需取 150x150 缩略图，0 卡顿)
+private struct LazyAssetGridCell: View {
+    let asset: PHAsset
+    @State private var thumbnail: UIImage?
+
+    var body: some View {
+        ZStack {
+            if let thumbnail {
+                Image(uiImage: thumbnail)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: 120)
+                    .clipped()
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.12))
+                    .frame(height: 120)
+            }
+        }
+        .onAppear {
+            loadThumbnail()
+        }
+    }
+
+    private func loadThumbnail() {
+        guard thumbnail == nil else { return }
+        let manager = PHImageManager.default()
+        let option = PHImageRequestOptions()
+        option.isSynchronous = false
+        option.deliveryMode = .fastFormat
+        option.isNetworkAccessAllowed = true
+
+        manager.requestImage(for: asset, targetSize: CGSize(width: 150, height: 150), contentMode: .aspectFill, options: option) { img, _ in
+            if let img {
+                DispatchQueue.main.async {
+                    self.thumbnail = img
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 单张照片高清大图预览
+private struct AssetPhotoDetailPreview: View {
+    let asset: PHAsset
+    @Environment(\.dismiss) private var dismiss
+    @State private var fullImage: UIImage?
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                if let fullImage {
+                    Image(uiImage: fullImage)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(10)
+                } else {
+                    ProgressView()
+                        .tint(.white)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("完成") { dismiss() }
+                        .foregroundStyle(.white)
+                        .font(.system(size: 15, weight: .bold))
+                }
+            }
+            .onAppear {
+                let manager = PHImageManager.default()
+                let option = PHImageRequestOptions()
+                option.isSynchronous = false
+                option.deliveryMode = .highQualityFormat
+                manager.requestImage(for: asset, targetSize: CGSize(width: 1080, height: 1920), contentMode: .aspectFit, options: option) { img, _ in
+                    if let img {
+                        DispatchQueue.main.async {
+                            self.fullImage = img
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+extension PHAsset: @retroactive Identifiable {
+    public var id: String { localIdentifier }
+}
+
+// MARK: - 📖 典藏级精装特刊大书封面 (仅读取 1 张相册代表照片，绝对不会卡顿)
 private struct HardcoverAnnualBookCard: View {
     let year: String
     let color: Color
+    @State private var coverImage: UIImage?
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -1526,12 +1696,23 @@ private struct HardcoverAnnualBookCard: View {
                     .foregroundStyle(Color.black.opacity(0.78))
                     .frame(height: 24)
 
-                Image("HomeSingle01")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 76, height: 60)
-                    .scaleEffect(1.45)
-                    .clipped()
+                ZStack {
+                    if let coverImage {
+                        Image(uiImage: coverImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 76, height: 60)
+                            .scaleEffect(1.45)
+                            .clipped()
+                    } else {
+                        Image("HomeSingle01")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 76, height: 60)
+                            .scaleEffect(1.45)
+                            .clipped()
+                    }
+                }
             }
             .padding(.horizontal, 10)
             .padding(.top, 8)
@@ -1556,6 +1737,44 @@ private struct HardcoverAnnualBookCard: View {
         )
         .shadow(color: .black.opacity(0.18), radius: 10, x: 5, y: 6)
         .shadow(color: .black.opacity(0.08), radius: 3, x: 2, y: 2)
+        .onAppear {
+            loadSingleCoverImageAsync()
+        }
+    }
+
+    private func loadSingleCoverImageAsync() {
+        guard coverImage == nil else { return }
+        Task.detached(priority: .background) {
+            let options = PHFetchOptions()
+            let calendar = Calendar.current
+            let yearInt = Int(year) ?? 2026
+            var components = DateComponents()
+            components.year = yearInt
+            components.month = 1
+            components.day = 1
+            let startDate = calendar.date(from: components) ?? Date()
+            components.year = yearInt + 1
+            let endDate = calendar.date(from: components) ?? Date()
+
+            options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", startDate as NSDate, endDate as NSDate)
+            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            options.fetchLimit = 1
+
+            let result = PHAsset.fetchAssets(with: .image, options: options)
+            if let asset = result.firstObject {
+                let manager = PHImageManager.default()
+                let reqOptions = PHImageRequestOptions()
+                reqOptions.isSynchronous = false
+                reqOptions.deliveryMode = .fastFormat
+                manager.requestImage(for: asset, targetSize: CGSize(width: 200, height: 200), contentMode: .aspectFill, options: reqOptions) { img, _ in
+                    if let img {
+                        Task { @MainActor in
+                            self.coverImage = img
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
