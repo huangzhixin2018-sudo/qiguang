@@ -2421,6 +2421,10 @@ private struct FilmCardTileItem: View {
 struct ProfileView: View {
     @State private var cacheSize = "0.0 MB"
     @State private var toastMessage: String?
+    @State private var showPrivacySheet = false
+    @State private var showAgreementSheet = false
+    @State private var posterCount = 0
+    @Environment(\.requestReview) private var requestReview
 
     var body: some View {
         NavigationStack {
@@ -2428,67 +2432,156 @@ struct ProfileView: View {
                 DotGridBackground()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 28) {
-                        // 1. 极简编辑部 Header (用户/应用标语)
-                        VStack(spacing: 12) {
+                    VStack(spacing: 24) {
+                        // 1. Month / Unfold 风格极简 Header + 动态珍藏数据胶囊
+                        VStack(spacing: 14) {
                             ZStack {
                                 Circle()
-                                    .fill(Color(red: 0.94, green: 0.92, blue: 0.88))
-                                    .frame(width: 80, height: 80)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Color(red: 0.96, green: 0.94, blue: 0.90),
+                                                Color(red: 0.90, green: 0.86, blue: 0.82)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 86, height: 86)
                                 Image(systemName: "sparkles")
-                                    .font(.system(size: 36, weight: .light))
-                                    .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
+                                    .font(.system(size: 38, weight: .light))
+                                    .foregroundStyle(Color(red: 0.40, green: 0.35, blue: 0.30))
                             }
-                            .overlay(Circle().stroke(Color(red: 0.82, green: 0.78, blue: 0.72), lineWidth: 1))
-                            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
+                            .overlay(Circle().stroke(Color(red: 0.82, green: 0.78, blue: 0.72).opacity(0.8), lineWidth: 1))
+                            .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
 
-                            VStack(spacing: 4) {
+                            VStack(spacing: 6) {
                                 Text("栖光")
-                                    .font(.system(size: 24, weight: .bold, design: .serif))
-                                    .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
+                                    .font(.system(size: 26, weight: .bold, design: .serif))
+                                    .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.16))
 
-                                Text("记录生命里每一抹亮色")
+                                Text("记录生命里每一抹亮色 · 编辑部图像画报")
                                     .font(.system(size: 13, weight: .medium))
                                     .foregroundStyle(Color(red: 0.55, green: 0.50, blue: 0.45))
                             }
+
+                            // 动态数据统计小胶囊 (Month 风格数据微标)
+                            HStack(spacing: 12) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "book.closed")
+                                        .font(.system(size: 11, weight: .semibold))
+                                    Text("珍藏画报 \(posterCount) 本")
+                                        .font(.system(size: 12, weight: .semibold))
+                                }
+                                .foregroundStyle(Color(red: 0.35, green: 0.30, blue: 0.25))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(Color.white.opacity(0.85), in: Capsule())
+                                .overlay(Capsule().stroke(Color.black.opacity(0.06), lineWidth: 1))
+
+                                HStack(spacing: 4) {
+                                    Image(systemName: "lock.shield")
+                                        .font(.system(size: 11, weight: .semibold))
+                                    Text("本地离线安全沙盒")
+                                        .font(.system(size: 12, weight: .medium))
+                                }
+                                .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(Color.white.opacity(0.85), in: Capsule())
+                                .overlay(Capsule().stroke(Color.black.opacity(0.06), lineWidth: 1))
+                            }
+                            .padding(.top, 4)
                         }
                         .padding(.top, 32)
 
-                        // 2. 苹果上线必备合规与基础功能入口列表 (极简双卡片分组)
-                        VStack(spacing: 16) {
-                            // 分组 1：法律与隐私合规 (App Store 强制必备 Guideline 5.1.1)
-                            VStack(spacing: 0) {
-                                profileRow(icon: "lock.shield", title: "隐私政策", value: "") {
-                                    toastMessage = "《栖光隐私政策》"
-                                }
-                                Divider().padding(.leading, 50)
-                                profileRow(icon: "doc.text", title: "服务协议", value: "") {
-                                    toastMessage = "《栖光用户服务协议》"
-                                }
-                            }
-                            .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
+                        // 2. Month 极简分组管理列表 (上线必备与高品质服务入口)
+                        VStack(spacing: 18) {
+                            // 组 1：数据与存储管理
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("数据与存储管理")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Color.gray)
+                                    .padding(.leading, 8)
 
-                            // 分组 2：基础轻量工具
-                            VStack(spacing: 0) {
-                                profileRow(icon: "trash", title: "清除缓存", value: cacheSize) {
-                                    cacheSize = "0.0 MB"
-                                    toastMessage = "已成功清除本地缓存"
+                                VStack(spacing: 0) {
+                                    profileRow(icon: "internaldrive", title: "存储空间机制", value: "全本地安全沙盒") {
+                                        toastMessage = "栖光所有画报均保存在您的手机本地，不占用云端服务器。"
+                                    }
+                                    Divider().padding(.leading, 50)
+                                    profileRow(icon: "trash", title: "清理系统缓存", value: cacheSize) {
+                                        cacheSize = "0.0 MB"
+                                        toastMessage = "已成功清除本地临时缓存"
+                                    }
                                 }
-                                Divider().padding(.leading, 50)
-                                profileRow(icon: "info.circle", title: "关于栖光", value: "v1.0.0") {
-                                    toastMessage = "栖光 v1.0.0 正式版"
-                                }
+                                .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
                             }
-                            .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
+
+                            // 组 2：安全与合规管理 (App Store 上线必备)
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("法律合规与隐私")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Color.gray)
+                                    .padding(.leading, 8)
+
+                                VStack(spacing: 0) {
+                                    profileRow(icon: "lock.shield", title: "隐私保护政策", value: "Guideline 5.1.1") {
+                                        showPrivacySheet = true
+                                    }
+                                    Divider().padding(.leading, 50)
+                                    profileRow(icon: "doc.text", title: "用户服务协议", value: "条款与版权声明") {
+                                        showAgreementSheet = true
+                                    }
+                                }
+                                .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
+                            }
+
+                            // 组 3：应用支持与关于
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("应用支持与关于")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Color.gray)
+                                    .padding(.leading, 8)
+
+                                VStack(spacing: 0) {
+                                    profileRow(icon: "star", title: "鼓励并评价栖光", value: "App Store 评分") {
+                                        requestReview()
+                                    }
+                                    Divider().padding(.leading, 50)
+                                    profileRow(icon: "info.circle", title: "关于栖光", value: "v1.0.0 正式版") {
+                                        toastMessage = "栖光 v1.0.0 正式版，感谢您的陪伴。"
+                                    }
+                                }
+                                .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
+                            }
                         }
                         .padding(.horizontal, 20)
+
+                        // 3. 底部 Minimalist Footer 标语
+                        VStack(spacing: 4) {
+                            Text("QIGUANG STUDIO · EDITORIAL MINIMALISM")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1.8)
+                                .foregroundStyle(Color.gray.opacity(0.6))
+                        }
+                        .padding(.top, 12)
                     }
                     .padding(.bottom, 100)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            .onAppear {
+                posterCount = MemoryPosterManager.shared.loadPosters().count
+            }
+            .sheet(isPresented: $showPrivacySheet) {
+                PrivacyPolicySheet()
+            }
+            .sheet(isPresented: $showAgreementSheet) {
+                UserAgreementSheet()
+            }
             .alert("提示", isPresented: Binding(
                 get: { toastMessage != nil },
                 set: { if !$0 { toastMessage = nil } }
@@ -2527,7 +2620,163 @@ struct ProfileView: View {
             .padding(.horizontal, 16)
             .frame(height: 52)
         }
-        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - 隐私政策独立弹窗 (App Store Guideline 5.1.1 合规文案)
+private struct PrivacyPolicySheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("栖光 App 隐私政策")
+                            .font(.system(size: 22, weight: .bold, design: .serif))
+                            .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.16))
+                        Text("更新日期：2026年08月11日  |  生效日期：2026年08月11日")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.gray)
+                    }
+                    .padding(.bottom, 8)
+
+                    Group {
+                        policySection(
+                            title: "【特别说明】纯粹本地架构",
+                            content: "欢迎您使用「栖光」。我们非常重视用户的隐私和个人信息保护。栖光是一款注重个人数据隐私的本地极简图像与回忆处理工具。我们承诺：栖光不设用户账号登录系统，不会将您的个人照片、视频、回忆记录或任何文件上传至任何远程服务器。您的所有数据均安全保存在您的设备本地。"
+                        )
+
+                        policySection(
+                            title: "1. 我们如何收集和使用您的个人信息",
+                            content: "栖光遵循“合法、正当、必要”的原则，仅在向您提供功能所必需的前提下使用相关设备权限：\n\n• 相册读取与写入权限：当您使用栖光选取照片/视频创建回忆画报、制作切图壁纸、提取莫兰迪底盘配色或保存生成的画报到系统相册时。我们仅在您主动触发相关功能并授权后，访问您所选择的具体照片或视频。所选照片和视频的本地副本仅保存在您手机系统的沙盒（Documents）目录中，绝不会上传至任何云端或第三方服务器。\n\n• 设备本地日志与缓存：仅用于保持应用界面流畅运行及提供一键“清理缓存”功能，不会包含任何个人身份标识符。"
+                        )
+
+                        policySection(
+                            title: "2. 系统权限调用说明",
+                            content: "• 相册读取权限 (NSPhotoLibraryUsageDescription)：允许您主动选取本地照片或视频导入 App 进行处理。\n• 相册保存权限 (NSPhotoLibraryAddUsageDescription)：允许您将制作好的画报与壁纸导出保存至手机系统相册。\n\n您可以在设备的“设置 - 隐私 - 照片”中随时管理或撤回上述授权。"
+                        )
+
+                        policySection(
+                            title: "3. 数据的存储与安全",
+                            content: "栖光全量架构基于 iOS 设备本地沙盒安全机制构建。您的画报配置、事件记录、纪念票根以及导入的照片视频，均完全存储在您设备的本地存储空间中。当您卸载栖光 App 或通过 App 内“清理缓存”功能清理数据时，设备沙盒内存储的相关应用数据将被彻底抹除且不可恢复。"
+                        )
+
+                        policySection(
+                            title: "4. 信息共享、转让与公开披露",
+                            content: "• 共享：我们不会与任何第三方公司、组织或个人共享您的个人信息。\n• 第三方 SDK：栖光未接入任何第三方统计、广告或追踪 SDK，不存在任何后台隐秘收集或跨应用追踪行为。\n• 转让与披露：我们不会将您的个人信息转让给任何第三方，亦不会公开披露您的任何个人数据。"
+                        )
+
+                        policySection(
+                            title: "5. 未成年人保护",
+                            content: "我们非常重视对未成年人个人信息的保护。栖光作为一款本地图像与回忆记录工具，不收集任何包含未成年人身份的个人信息。若您为未成年人，建议在父母或法定监护人的指导下使用栖光。"
+                        )
+
+                        policySection(
+                            title: "6. 联系我们",
+                            content: "如果您对本隐私政策或个人信息保护有任何疑问，可通过电子邮箱与我们联系：support@qiguang-app.com"
+                        )
+                    }
+                }
+                .padding(20)
+            }
+            .background(Color(red: 0.98, green: 0.97, blue: 0.95))
+            .navigationTitle("隐私政策")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("完成") { dismiss() }
+                        .font(.system(size: 15, weight: .bold))
+                }
+            }
+        }
+    }
+
+    private func policySection(title: String, content: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 15, weight: .bold, design: .serif))
+                .foregroundStyle(Color(red: 0.25, green: 0.22, blue: 0.20))
+            Text(content)
+                .font(.system(size: 13.5, weight: .regular))
+                .foregroundStyle(Color(red: 0.35, green: 0.33, blue: 0.30))
+                .lineSpacing(5)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: .black.opacity(0.02), radius: 6, x: 0, y: 2)
+    }
+}
+
+// MARK: - 用户服务协议独立弹窗
+private struct UserAgreementSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("栖光用户服务协议")
+                            .font(.system(size: 22, weight: .bold, design: .serif))
+                            .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.16))
+                        Text("更新日期：2026年08月11日  |  生效日期：2026年08月11日")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.gray)
+                    }
+                    .padding(.bottom, 8)
+
+                    Group {
+                        agreementSection(
+                            title: "1. 协议的接受与条款变更",
+                            content: "欢迎使用「栖光」App。本协议是您与栖光开发者之间关于您下载、安装、使用栖光软件所订立的法律协议。当您开始使用栖光时，即表示您已阅读、理解并同意接受本协议的所有条款。"
+                        )
+
+                        agreementSection(
+                            title: "2. 服务内容与使用规范",
+                            content: "栖光为您提供个人本地画报制作、图文排版、壁纸编辑与回忆记录等工具服务。您在使用栖光时应遵守法律法规，不得利用栖光制作、传播违法或侵犯他人合法权益的内容。"
+                        )
+
+                        agreementSection(
+                            title: "3. 知识产权声明",
+                            content: "栖光软件的所有权、知识产权及相关权益归栖光开发者所有。您使用栖光所创作、导出的图像和图文作品，其著作权及相关权益归属于您本人。"
+                        )
+
+                        agreementSection(
+                            title: "4. 免责声明与本地存储风险提示",
+                            content: "由于栖光全量采用设备本地离线存储，不提供云端备份服务，请您自行妥善保管本地数据与相册备份。因设备丢失、系统故障或卸载软件导致的数据灭失风险由用户自行承担。"
+                        )
+                    }
+                }
+                .padding(20)
+            }
+            .background(Color(red: 0.98, green: 0.97, blue: 0.95))
+            .navigationTitle("服务协议")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("完成") { dismiss() }
+                        .font(.system(size: 15, weight: .bold))
+                }
+            }
+        }
+    }
+
+    private func agreementSection(title: String, content: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 15, weight: .bold, design: .serif))
+                .foregroundStyle(Color(red: 0.25, green: 0.22, blue: 0.20))
+            Text(content)
+                .font(.system(size: 13.5, weight: .regular))
+                .foregroundStyle(Color(red: 0.35, green: 0.33, blue: 0.30))
+                .lineSpacing(5)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: .black.opacity(0.02), radius: 6, x: 0, y: 2)
     }
 }
 
