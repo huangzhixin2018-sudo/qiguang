@@ -1294,20 +1294,10 @@ private struct EnvelopePocketShape: Shape {
 private struct NewCollectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var collectionName = ""
-    @State private var selectedThemeIndex = 0
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var selectedCoverImage: UIImage? = nil
     @FocusState private var isNameFocused: Bool
     let onCreate: (String, String, UIImage?) -> Void
-
-    private let themes: [(id: String, name: String, icon: String, desc: String)] = [
-        ("magazine", "杂志画报", "book.fill", "顶部画报轮播 · 贴边日记流"),
-        ("darkroom", "暗房胶片", "camera.aperture", "朱红波普顶栏 · 暗房底片阵"),
-        ("polaroid", "宝丽来", "photo.on.rectangle", "经典白框相纸 · 复古倾斜感"),
-        ("gallery", "极简画廊", "square.grid.2x2.fill", "双列瀑布流 · 展厅白空间"),
-        ("timeline", "时光轴", "clock.arrow.circlepath", "时间节点线 · 时光河流感"),
-        ("book", "书籍相册", "book.closed", "拟真翻页动效 · 纸质相册感")
-    ]
 
     private var trimmedName: String {
         collectionName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1423,38 +1413,9 @@ private struct NewCollectionSheet: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("选择详情页主题")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.secondary)
-
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                            ForEach(0..<themes.count, id: \.self) { idx in
-                                let t = themes[idx]
-                                let isSelected = selectedThemeIndex == idx
-                                Button {
-                                    selectedThemeIndex = idx
-                                } label: {
-                                    Text(t.name)
-                                        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
-                                        .foregroundStyle(isSelected ? Color.white : Color.primary)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 12)
-                                        .background(
-                                            isSelected
-                                            ? Color.primary
-                                            : Color(.systemGray6),
-                                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-
-                    Button {
+                                    Button {
                         guard !trimmedName.isEmpty else { return }
-                        onCreate(trimmedName, themes[selectedThemeIndex].id, selectedCoverImage)
+                        onCreate(trimmedName, "magazine", selectedCoverImage)
                         dismiss()
                     } label: {
                         Text("创建故事集")
@@ -1473,7 +1434,7 @@ private struct NewCollectionSheet: View {
                 .padding(.bottom, 24)
             }
         }
-        .presentationDetents([.fraction(0.7), .large])
+        .presentationDetents([.fraction(0.52), .medium])
         .presentationCornerRadius(36)
         .onAppear {
             isNameFocused = true
@@ -1485,7 +1446,7 @@ private struct NewCollectionSheet: View {
 // MARK: - 独立年度照片整理页：YearsOrganizerView (精装大书特刊美学)
 struct YearsOrganizerView: View {
     private let sampleYears: [(year: String, count: Int, color: Color, title: String, subtitle: String)] = [
-        ("2025", 384, Color(red: 0.62, green: 0.78, blue: 0.88), "栖光 · 年鉴", "HABITATS"), // 天青蓝 (截图参考图同款)
+        ("2025", 384, Color(red: 0.64, green: 0.76, blue: 0.85), "栖光 · 年鉴", "HABITATS"), // 天青蓝 (截图参考图同款)
         ("2024", 1020, Color(red: 0.85, green: 0.81, blue: 0.75), "时光 · 特刊", "MEMORIES"), // 燕麦暖沙
         ("2023", 640, Color(red: 0.74, green: 0.80, blue: 0.76), "岁月 · 归档", "CHRONICLE"), // 鼠尾草绿
         ("2022", 412, Color(red: 0.84, green: 0.75, blue: 0.72), "记忆 · 画册", "LOOKBACK")   // 陶土暖粉
@@ -1617,8 +1578,10 @@ private struct HardcoverAnnualBookCard: View {
     var body: some View {
         ZStack(alignment: .leading) {
             // 1. 硬皮织物/麻布特种纸精装底板
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
                 .fill(color)
+
+            HardcoverLinenTexture()
 
             // 2. 封面版面排版内容 (顶部衬线大标题 + 中央内嵌照片框 + 底部年份)
             VStack(spacing: 0) {
@@ -1676,21 +1639,53 @@ private struct HardcoverAnnualBookCard: View {
             .frame(maxWidth: .infinity)
 
             HardcoverBookSpine()
-                .frame(width: 24)
+                .frame(width: 13)
         }
         .frame(height: 220)
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .stroke(Color.white.opacity(0.25), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 0.6)
         )
         .shadow(color: .black.opacity(0.18), radius: 10, x: 5, y: 6)
         .shadow(color: .black.opacity(0.08), radius: 3, x: 2, y: 2)
     }
 }
 
+private struct HardcoverLinenTexture: View {
+    var body: some View {
+        Canvas { context, size in
+            let spacing: CGFloat = 1.65
+            var lightThreads = Path()
+            var darkThreads = Path()
+            var offset = -size.height
+
+            while offset <= size.width {
+                lightThreads.move(to: CGPoint(x: offset, y: 0))
+                lightThreads.addLine(to: CGPoint(x: offset + size.height, y: size.height))
+
+                darkThreads.move(to: CGPoint(x: offset + size.height, y: 0))
+                darkThreads.addLine(to: CGPoint(x: offset, y: size.height))
+                offset += spacing
+            }
+
+            context.stroke(
+                darkThreads,
+                with: .color(Color.black.opacity(0.13)),
+                lineWidth: 0.34
+            )
+            context.stroke(
+                lightThreads,
+                with: .color(Color.white.opacity(0.18)),
+                lineWidth: 0.34
+            )
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 private struct HardcoverBookSpine: View {
-    private let faceWidth: CGFloat = 12
+    private let faceWidth: CGFloat = 6.5
 
     var body: some View {
         GeometryReader { proxy in
@@ -1699,68 +1694,54 @@ private struct HardcoverBookSpine: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.black.opacity(0.16),
-                                Color.white.opacity(0.16),
-                                Color.black.opacity(0.10),
-                                Color.white.opacity(0.08)
+                                Color.black.opacity(0.11),
+                                Color.white.opacity(0.10),
+                                Color.black.opacity(0.07),
+                                Color.white.opacity(0.04)
                             ],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
                     .frame(width: faceWidth, height: proxy.size.height)
-                    .overlay {
-                        Canvas { context, size in
-                            var threads = Path()
-                            var y: CGFloat = -size.width
 
-                            while y < size.height {
-                                threads.move(to: CGPoint(x: 0, y: y))
-                                threads.addLine(to: CGPoint(x: size.width, y: y + size.width))
-                                y += 2.4
-                            }
-
-                            context.stroke(
-                                threads,
-                                with: .color(Color.white.opacity(0.10)),
-                                lineWidth: 0.35
-                            )
-                        }
-                        .clipShape(HardcoverSpineFace())
-                    }
+                Rectangle()
+                    .fill(Color.white.opacity(0.18))
+                    .frame(width: 0.5)
+                    .offset(x: 1)
 
                 Path { path in
-                    path.move(to: CGPoint(x: 0, y: 5))
+                    path.move(to: CGPoint(x: 0, y: 4))
                     path.addLine(to: CGPoint(x: faceWidth, y: 0))
-                    path.addLine(to: CGPoint(x: faceWidth, y: 5))
-                    path.addLine(to: CGPoint(x: 1, y: 9))
+                    path.addLine(to: CGPoint(x: faceWidth, y: 3.5))
+                    path.addLine(to: CGPoint(x: 1, y: 7))
                     path.closeSubpath()
                 }
-                .fill(Color.white.opacity(0.16))
+                .fill(Color.white.opacity(0.13))
 
                 Path { path in
                     let height = proxy.size.height
-                    path.move(to: CGPoint(x: 0, y: height - 5))
+                    path.move(to: CGPoint(x: 0, y: height - 4))
                     path.addLine(to: CGPoint(x: faceWidth, y: height))
-                    path.addLine(to: CGPoint(x: faceWidth, y: height - 5))
-                    path.addLine(to: CGPoint(x: 1, y: height - 9))
+                    path.addLine(to: CGPoint(x: faceWidth, y: height - 3.5))
+                    path.addLine(to: CGPoint(x: 1, y: height - 7))
                     path.closeSubpath()
                 }
-                .fill(Color.black.opacity(0.10))
+                .fill(Color.black.opacity(0.08))
 
                 LinearGradient(
                     colors: [
-                        Color.black.opacity(0.20),
-                        Color.white.opacity(0.24),
-                        Color.black.opacity(0.06),
+                        Color.black.opacity(0.13),
+                        Color.white.opacity(0.14),
+                        Color.black.opacity(0.04),
                         Color.clear
                     ],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
-                .frame(width: 8)
+                .frame(width: 5.5)
                 .offset(x: faceWidth)
-                .shadow(color: .black.opacity(0.12), radius: 2, x: 1, y: 0)
+                .shadow(color: .black.opacity(0.08), radius: 1.2, x: 0.8, y: 0)
             }
         }
         .allowsHitTesting(false)
@@ -1770,10 +1751,10 @@ private struct HardcoverBookSpine: View {
 private struct HardcoverSpineFace: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.minY + 5))
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + 4))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - 5))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - 4))
         path.closeSubpath()
         return path
     }
