@@ -94,7 +94,6 @@ struct HomeView: View {
 
     private let shortcuts: [HomeShortcut] = [
         .toneCard,
-        .darkroom,
         .memoryCalendar,
         .yearAlbum
     ]
@@ -261,7 +260,6 @@ struct HomeView: View {
 
 private enum HomeShortcut: Identifiable {
     case toneCard
-    case darkroom
     case memoryCalendar
     case yearAlbum
 
@@ -270,7 +268,6 @@ private enum HomeShortcut: Identifiable {
     var title: String {
         switch self {
         case .toneCard: return "取色卡片"
-        case .darkroom: return "底片灯箱"
         case .memoryCalendar: return "回忆日历"
         case .yearAlbum: return "年度相册"
         }
@@ -279,7 +276,6 @@ private enum HomeShortcut: Identifiable {
     var iconName: String {
         switch self {
         case .toneCard: return "paintpalette.fill"
-        case .darkroom: return "film.stack"
         case .memoryCalendar: return "calendar"
         case .yearAlbum: return "archivebox"
         }
@@ -288,7 +284,6 @@ private enum HomeShortcut: Identifiable {
     var color: Color {
         switch self {
         case .toneCard: return Color(red: 0.52, green: 0.44, blue: 0.50)
-        case .darkroom: return Color(red: 0.59, green: 0.42, blue: 0.38)
         case .memoryCalendar: return Color(red: 0.55, green: 0.50, blue: 0.36)
         case .yearAlbum: return Color(red: 0.58, green: 0.44, blue: 0.35)
         }
@@ -299,8 +294,6 @@ private enum HomeShortcut: Identifiable {
         switch self {
         case .toneCard:
             PhotoToneCardView()
-        case .darkroom:
-            DarkroomLightboxView()
         case .memoryCalendar:
             TimeCapsuleView()
         case .yearAlbum:
