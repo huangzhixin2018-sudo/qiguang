@@ -1071,9 +1071,7 @@ private struct StoryCollectionCardItem: View {
 
     var body: some View {
         NavigationLink {
-            StoryDetailView(title: collection.title, theme: collection.theme)
-                .toolbar(.hidden, for: .tabBar)
-                .toolbarVisibility(.hidden, for: .tabBar)
+            StoryDetailView(title: collection.title, coverImage: coverImage)
         } label: {
             UnfoldBreakoutCardView(title: collection.title, image: coverImage, index: index)
                 .frame(height: 104)
@@ -1764,7 +1762,7 @@ private struct HardcoverSpineFace: Shape {
 // MARK: - 精致编辑部杂志画报主故事详情页 (StoryDetailView - Magazine Editorial)
 struct StoryDetailView: View {
     let title: String
-    @State var theme: String = "magazine"
+    var coverImage: UIImage? = nil
     @ObservedObject private var dataManager = StoryDataManager.shared
     @State private var isShowingNewEntry = false
 
@@ -1782,6 +1780,7 @@ struct StoryDetailView: View {
         StoryDetailMagazineView(
             title: title,
             dateString: formattedDateString,
+            coverImage: coverImage,
             photos: allPhotos,
             entries: dataManager.entries
         )
@@ -1790,39 +1789,15 @@ struct StoryDetailView: View {
                 Button {
                     isShowingNewEntry = true
                 } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 12, weight: .bold))
-                        Text("记录")
-                            .font(.system(size: 13, weight: .semibold))
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.primary.opacity(0.08), in: Capsule())
-                    .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .overlay(alignment: .bottom) {
-            Button {
-                isShowingNewEntry = true
-            } label: {
-                HStack(spacing: 6) {
                     Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("添加故事")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.primary)
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 22)
-                .padding(.vertical, 12)
-                .background(Color.primary, in: Capsule())
-                .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
             }
-            .buttonStyle(.plain)
-            .padding(.bottom, 24)
         }
+        .toolbar(.hidden, for: .tabBar)
+        .toolbarVisibility(.hidden, for: .tabBar)
+        .hideTabBarOnRealDevice()
         .sheet(isPresented: $isShowingNewEntry) {
             NewDiaryEntrySheet { entry in
                 dataManager.addEntry(entry)
@@ -1835,6 +1810,7 @@ struct StoryDetailView: View {
 private struct StoryDetailMagazineView: View {
     let title: String
     let dateString: String
+    let coverImage: UIImage?
     let photos: [UIImage]
     let entries: [StoryDiaryEntry]
 
@@ -1844,7 +1820,7 @@ private struct StoryDetailMagazineView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                // 1. 顶部轮播画报
+                // 1. 顶部封面/轮播画报 (优先展示上传照片轮播 > 封面照片 > 极简卡片)
                 ZStack {
                     if !photos.isEmpty {
                         ForEach(photos.indices, id: \.self) { index in
@@ -1858,25 +1834,38 @@ private struct StoryDetailMagazineView: View {
                                     .transition(.opacity)
                             }
                         }
+                    } else if let cover = coverImage {
+                        Image(uiImage: cover)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 280)
+                            .clipped()
                     } else {
-                        // 浅色照片样板占位
+                        // 极简特刊底框 (不带任何模糊假图片)
                         ZStack {
-                            LinearGradient(colors: [Color(red: 0.92, green: 0.94, blue: 0.96), Color(red: 0.85, green: 0.88, blue: 0.92)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            LinearGradient(
+                                colors: [Color(red: 0.94, green: 0.93, blue: 0.90), Color(red: 0.88, green: 0.86, blue: 0.82)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
 
-                            VStack(spacing: 6) {
-                                Image(systemName: "magazine.fill")
-                                    .font(.system(size: 36))
-                                    .foregroundStyle(.secondary)
-                                Text("「杂志画报」封面")
-                                    .font(.system(size: 14, weight: .medium, design: .serif))
-                                    .foregroundStyle(.secondary)
+                            VStack(spacing: 8) {
+                                Text("栖光 · 典藏刊")
+                                    .font(.system(size: 11, weight: .bold, design: .serif))
+                                    .foregroundStyle(Color(red: 0.55, green: 0.50, blue: 0.45))
+                                    .tracking(3)
+
+                                Text(title)
+                                    .font(.system(size: 22, weight: .bold, design: .serif))
+                                    .foregroundStyle(Color(red: 0.25, green: 0.22, blue: 0.20))
                             }
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: 280)
+                        .frame(height: 240)
                     }
                 }
-                .frame(height: 280)
+                .frame(height: photos.isEmpty && coverImage == nil ? 240 : 280)
                 .onReceive(timer) { _ in
                     if !photos.isEmpty {
                         withAnimation(.easeInOut(duration: 1.2)) {
@@ -1898,7 +1887,7 @@ private struct StoryDetailMagazineView: View {
                 .padding(.top, 24)
                 .padding(.bottom, 20)
 
-                // 3. 故事流 (有真实数据用真实数据，无数据展示样板卡片)
+                // 3. 故事流 (只渲染真实数据，零假图占位)
                 if !entries.isEmpty {
                     LazyVStack(spacing: 28) {
                         ForEach(entries) { entry in
@@ -1924,56 +1913,15 @@ private struct StoryDetailMagazineView: View {
                             .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.bottom, 60)
+                    .padding(.bottom, 40)
                 } else {
-                    // 浅色样板日记流展示
-                    VStack(spacing: 24) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            RoundedRectangle(cornerRadius: 0)
-                                .fill(Color(red: 0.90, green: 0.92, blue: 0.95))
-                                .frame(height: 240)
-                                .overlay(
-                                    VStack(spacing: 6) {
-                                        Image(systemName: "photo")
-                                            .font(.system(size: 28))
-                                        Text("高清照片结构样板 01")
-                                            .font(.system(size: 13))
-                                    }
-                                    .foregroundStyle(.secondary)
-                                )
-
-                            Text("在清晨的光影里漫步，空气里透着清甜的温度。记录下这一刻的静谧与温柔。")
-                                .font(.system(size: 15, weight: .regular, design: .serif))
-                                .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
-                                .lineSpacing(6)
-                                .padding(20)
-                                .background(Color(red: 0.98, green: 0.96, blue: 0.89))
-                        }
-                        .padding(.horizontal, 16)
-
-                        VStack(alignment: .leading, spacing: 0) {
-                            RoundedRectangle(cornerRadius: 0)
-                                .fill(Color(red: 0.93, green: 0.90, blue: 0.92))
-                                .frame(height: 240)
-                                .overlay(
-                                    VStack(spacing: 6) {
-                                        Image(systemName: "photo")
-                                            .font(.system(size: 28))
-                                        Text("高清照片结构样板 02")
-                                            .font(.system(size: 13))
-                                    }
-                                    .foregroundStyle(.secondary)
-                                )
-
-                            Text("傍晚时分的海边，夕阳把云朵染成了温暖的烧陶橘。生活中的闪光时刻。")
-                                .font(.system(size: 15, weight: .regular, design: .serif))
-                                .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.18))
-                                .lineSpacing(6)
-                                .padding(20)
-                                .background(Color(red: 0.98, green: 0.96, blue: 0.89))
-                        }
-                        .padding(.horizontal, 16)
+                    // 无假图卡片，干净留白，等待用户真实上传
+                    VStack(spacing: 12) {
+                        Text("轻触右上角 「+」 记录第一个故事")
+                            .font(.system(size: 13, weight: .medium, design: .serif))
+                            .foregroundStyle(Color.secondary.opacity(0.7))
                     }
+                    .padding(.top, 40)
                     .padding(.bottom, 60)
                 }
             }
