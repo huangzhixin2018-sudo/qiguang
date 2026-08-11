@@ -502,33 +502,7 @@ struct MemoriesView: View {
                     .padding(.bottom, 12)
 
                     if manager.posters.isEmpty {
-                        VStack(spacing: 16) {
-                            Spacer()
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 44, weight: .light))
-                                .foregroundStyle(Color(red: 0.65, green: 0.60, blue: 0.55))
-
-                            Text("还没有记录生命里的光")
-                                .font(.system(size: 16, weight: .medium, design: .serif))
-                                .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
-
-                            Button {
-                                isShowingCreateSheet = true
-                            } label: {
-                                Text("新建第一份画报")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 10)
-                                    .background(Color(red: 0.35, green: 0.30, blue: 0.28))
-                                    .clipShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.top, 8)
-
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity)
+                        Spacer()
                     } else {
                         // 3. 双列莫兰迪圆窗肖像画报卡 (Morandi Circle Portrait Cards)
                         ScrollView(showsIndicators: false) {
@@ -1443,11 +1417,11 @@ private struct NewCollectionSheet: View {
 
 // MARK: - 独立年度照片整理页：YearsOrganizerView (精装大书特刊美学)
 struct YearsOrganizerView: View {
-    private let sampleYears: [(year: String, count: Int, color: Color, title: String, subtitle: String)] = [
-        ("2025", 384, Color(red: 0.64, green: 0.76, blue: 0.85), "栖光 · 年鉴", "HABITATS"), // 天青蓝 (截图参考图同款)
-        ("2024", 1020, Color(red: 0.85, green: 0.81, blue: 0.75), "时光 · 特刊", "MEMORIES"), // 燕麦暖沙
-        ("2023", 640, Color(red: 0.74, green: 0.80, blue: 0.76), "岁月 · 归档", "CHRONICLE"), // 鼠尾草绿
-        ("2022", 412, Color(red: 0.84, green: 0.75, blue: 0.72), "记忆 · 画册", "LOOKBACK")   // 陶土暖粉
+    private let sampleYears: [(year: String, photoCount: Int, videoCount: Int, color: Color)] = [
+        ("2026", 5, 2, Color(red: 0.25, green: 0.36, blue: 0.28)),
+        ("2025", 18, 4, Color(red: 0.52, green: 0.65, blue: 0.70)),
+        ("2024", 12, 3, Color(red: 0.66, green: 0.62, blue: 0.54)),
+        ("2023", 9, 1, Color(red: 0.55, green: 0.45, blue: 0.44))
     ]
 
     var body: some View {
@@ -1460,25 +1434,12 @@ struct YearsOrganizerView: View {
                 ) {
                     ForEach(sampleYears, id: \.year) { item in
                         NavigationLink {
-                            YearDetailView(year: item.year, count: item.count)
+                            YearDetailView(year: item.year)
                         } label: {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HardcoverAnnualBookCard(
-                                    year: item.year,
-                                    color: item.color,
-                                    title: item.title,
-                                    subtitle: item.subtitle
-                                )
-
-                                HStack(spacing: 5) {
-                                    Image(systemName: "photo.stack.fill")
-                                        .font(.system(size: 11))
-                                    Text("\(item.count) 张精彩记忆")
-                                        .font(.system(size: 12, weight: .semibold, design: .serif))
-                                }
-                                .foregroundStyle(Color(red: 0.35, green: 0.32, blue: 0.30))
-                                .padding(.leading, 4)
-                            }
+                            HardcoverAnnualBookCard(
+                                year: item.year,
+                                color: item.color
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -1507,58 +1468,11 @@ struct YearsOrganizerView: View {
 // MARK: - 某一年份的照片记忆放映机：YearDetailView
 private struct YearDetailView: View {
     let year: String
-    let count: Int
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
-                    // 录像带播放信息框
-                    VStack(spacing: 8) {
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(Color.red)
-                                .frame(width: 8, height: 8)
-                            Text("PLAY ▶ \(year) REEL")
-                                .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                .foregroundStyle(.white)
-                        }
-
-                        Text("YEAR OF \(year)")
-                            .font(.system(size: 28, weight: .black, design: .serif))
-                            .foregroundStyle(.white)
-
-                        Text("共记录 \(count) 个回忆瞬间 · 慢速倒带中")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-                    .padding(.top, 20)
-
-                    VStack(spacing: 16) {
-                        ForEach(1...4, id: \.self) { idx in
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.white.opacity(0.08))
-                                .frame(height: 200)
-                                .overlay(
-                                    VStack(spacing: 8) {
-                                        Image(systemName: "play.rectangle.fill")
-                                            .font(.system(size: 36))
-                                            .foregroundStyle(Color(red: 0.98, green: 0.82, blue: 0.10))
-                                        Text("\(year) 年第 \(idx) 季度影像回忆录")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundStyle(.white.opacity(0.8))
-                                    }
-                                )
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .padding(.bottom, 40)
-            }
-        }
-        .navigationTitle("\(year) 相册回放")
+        Color(.systemBackground)
+            .ignoresSafeArea()
+        .navigationTitle(year)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbarVisibility(.hidden, for: .tabBar)
@@ -1570,8 +1484,6 @@ private struct YearDetailView: View {
 private struct HardcoverAnnualBookCard: View {
     let year: String
     let color: Color
-    let title: String
-    let subtitle: String
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -1581,65 +1493,35 @@ private struct HardcoverAnnualBookCard: View {
 
             HardcoverLinenTexture()
 
-            // 2. 封面版面排版内容 (顶部衬线大标题 + 中央内嵌照片框 + 底部年份)
-            VStack(spacing: 0) {
-                // 顶部编辑部标题
-                VStack(spacing: 3) {
-                    Text("THE")
-                        .font(.system(size: 8, weight: .bold, design: .serif))
-                        .foregroundStyle(Color.white.opacity(0.85))
-                        .tracking(1.5)
+            VStack(spacing: 8) {
+                Text(year)
+                    .font(.custom("AvenirNext-DemiBold", fixedSize: 22))
+                    .foregroundStyle(Color.black.opacity(0.78))
+                    .frame(height: 24)
 
-                    Text(title)
-                        .font(.system(size: 13, weight: .bold, design: .serif))
-                        .foregroundStyle(Color.white)
-                        .tracking(1.8)
-                }
-                .padding(.top, 16)
-
-                Spacer(minLength: 0)
-
-                // 中央下沉式压印照片框 (Debossed Window Inset Box)
-                ZStack {
-                    RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .fill(Color.black.opacity(0.08))
-
-                    Image("HomeSingle01")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 86, height: 104)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                                .stroke(Color.black.opacity(0.12), lineWidth: 0.8)
-                        )
-                        .shadow(color: .black.opacity(0.20), radius: 4, x: 0, y: 2)
-                }
-                .frame(width: 92, height: 110)
-
-                Spacer(minLength: 0)
-
-                // 底部副标题与年份
-                VStack(spacing: 3) {
-                    Text(subtitle)
-                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.white.opacity(0.75))
-                        .tracking(1.6)
-
-                    Text(year)
-                        .font(.system(size: 13, weight: .heavy, design: .serif))
-                        .foregroundStyle(Color.white)
-                        .tracking(2.0)
-                }
-                .padding(.bottom, 16)
+                Image("HomeSingle01")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 76, height: 60)
+                    .scaleEffect(1.45)
+                    .clipped()
             }
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 10)
+            .padding(.top, 8)
+            .padding(.bottom, 9)
+            .background(Color(red: 0.95, green: 0.94, blue: 0.91))
+            .overlay {
+                Rectangle()
+                    .stroke(Color.black.opacity(0.08), lineWidth: 0.5)
+            }
+            .shadow(color: .black.opacity(0.13), radius: 3, x: 0, y: 2)
+            .padding(.leading, 8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             HardcoverBookSpine()
                 .frame(width: 13)
         }
-        .frame(height: 220)
+        .frame(height: 190)
         .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 2, style: .continuous)
@@ -1689,24 +1571,8 @@ private struct HardcoverBookSpine: View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 HardcoverSpineFace()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.black.opacity(0.11),
-                                Color.white.opacity(0.10),
-                                Color.black.opacity(0.07),
-                                Color.white.opacity(0.04)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .fill(Color.black.opacity(0.055))
                     .frame(width: faceWidth, height: proxy.size.height)
-
-                Rectangle()
-                    .fill(Color.white.opacity(0.18))
-                    .frame(width: 0.5)
-                    .offset(x: 1)
 
                 Path { path in
                     path.move(to: CGPoint(x: 0, y: 4))
@@ -1729,17 +1595,16 @@ private struct HardcoverBookSpine: View {
 
                 LinearGradient(
                     colors: [
-                        Color.black.opacity(0.13),
-                        Color.white.opacity(0.14),
-                        Color.black.opacity(0.04),
+                        Color.clear,
+                        Color.black.opacity(0.16),
+                        Color.white.opacity(0.12),
                         Color.clear
                     ],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
-                .frame(width: 5.5)
-                .offset(x: faceWidth)
-                .shadow(color: .black.opacity(0.08), radius: 1.2, x: 0.8, y: 0)
+                .frame(width: 3.5)
+                .offset(x: faceWidth - 0.5)
             }
         }
         .allowsHitTesting(false)
