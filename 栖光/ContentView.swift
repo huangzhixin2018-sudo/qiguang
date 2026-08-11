@@ -93,7 +93,6 @@ struct HomeView: View {
     ]
 
     private let shortcuts: [HomeShortcut] = [
-        .toneCard,
         .yearAlbum
     ]
 
@@ -273,28 +272,24 @@ struct HomeView: View {
 }
 
 private enum HomeShortcut: Identifiable {
-    case toneCard
     case yearAlbum
 
     var id: String { title }
 
     var title: String {
         switch self {
-        case .toneCard: return "取色卡片"
         case .yearAlbum: return "年度相册"
         }
     }
 
     var iconName: String {
         switch self {
-        case .toneCard: return "paintpalette.fill"
         case .yearAlbum: return "archivebox"
         }
     }
 
     var color: Color {
         switch self {
-        case .toneCard: return Color(red: 0.52, green: 0.44, blue: 0.50)
         case .yearAlbum: return Color(red: 0.58, green: 0.44, blue: 0.35)
         }
     }
@@ -302,8 +297,6 @@ private enum HomeShortcut: Identifiable {
     @ViewBuilder
     var destination: some View {
         switch self {
-        case .toneCard:
-            PhotoToneCardView()
         case .yearAlbum:
             YearsOrganizerView()
         }
