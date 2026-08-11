@@ -2424,8 +2424,6 @@ struct ProfileView: View {
     @State private var toastMessage: String?
     @State private var showPrivacySheet = false
     @State private var showAgreementSheet = false
-    @State private var posterCount = 0
-    @Environment(\.requestReview) private var requestReview
 
     var body: some View {
         NavigationStack {
@@ -2433,151 +2431,40 @@ struct ProfileView: View {
                 DotGridBackground()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        // 1. Month / Unfold 风格极简 Header + 动态珍藏数据胶囊
-                        VStack(spacing: 14) {
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                Color(red: 0.96, green: 0.94, blue: 0.90),
-                                                Color(red: 0.90, green: 0.86, blue: 0.82)
-                                            ],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 86, height: 86)
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 38, weight: .light))
-                                    .foregroundStyle(Color(red: 0.40, green: 0.35, blue: 0.30))
+                    VStack(spacing: 16) {
+                        // 1. 法律与隐私合规 (App Store 上线必加 Guideline 5.1.1)
+                        VStack(spacing: 0) {
+                            profileRow(icon: "lock.shield", title: "隐私政策", value: "") {
+                                showPrivacySheet = true
                             }
-                            .overlay(Circle().stroke(Color(red: 0.82, green: 0.78, blue: 0.72).opacity(0.8), lineWidth: 1))
-                            .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 4)
-
-                            VStack(spacing: 6) {
-                                Text("栖光")
-                                    .font(.system(size: 26, weight: .bold, design: .serif))
-                                    .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.16))
-
-                                Text("记录生命里每一抹亮色 · 编辑部图像画报")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundStyle(Color(red: 0.55, green: 0.50, blue: 0.45))
-                            }
-
-                            // 动态数据统计小胶囊 (Month 风格数据微标)
-                            HStack(spacing: 12) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "book.closed")
-                                        .font(.system(size: 11, weight: .semibold))
-                                    Text("珍藏画报 \(posterCount) 本")
-                                        .font(.system(size: 12, weight: .semibold))
-                                }
-                                .foregroundStyle(Color(red: 0.35, green: 0.30, blue: 0.25))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
-                                .background(Color.white.opacity(0.85), in: Capsule())
-                                .overlay(Capsule().stroke(Color.black.opacity(0.06), lineWidth: 1))
-
-                                HStack(spacing: 4) {
-                                    Image(systemName: "lock.shield")
-                                        .font(.system(size: 11, weight: .semibold))
-                                    Text("本地离线安全沙盒")
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
-                                .background(Color.white.opacity(0.85), in: Capsule())
-                                .overlay(Capsule().stroke(Color.black.opacity(0.06), lineWidth: 1))
-                            }
-                            .padding(.top, 4)
-                        }
-                        .padding(.top, 32)
-
-                        // 2. Month 极简分组管理列表 (上线必备与高品质服务入口)
-                        VStack(spacing: 18) {
-                            // 组 1：数据与存储管理
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("数据与存储管理")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(Color.gray)
-                                    .padding(.leading, 8)
-
-                                VStack(spacing: 0) {
-                                    profileRow(icon: "internaldrive", title: "存储空间机制", value: "全本地安全沙盒") {
-                                        toastMessage = "栖光所有画报均保存在您的手机本地，不占用云端服务器。"
-                                    }
-                                    Divider().padding(.leading, 50)
-                                    profileRow(icon: "trash", title: "清理系统缓存", value: cacheSize) {
-                                        cacheSize = "0.0 MB"
-                                        toastMessage = "已成功清除本地临时缓存"
-                                    }
-                                }
-                                .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
-                            }
-
-                            // 组 2：安全与合规管理 (App Store 上线必备)
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("法律合规与隐私")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(Color.gray)
-                                    .padding(.leading, 8)
-
-                                VStack(spacing: 0) {
-                                    profileRow(icon: "lock.shield", title: "隐私保护政策", value: "Guideline 5.1.1") {
-                                        showPrivacySheet = true
-                                    }
-                                    Divider().padding(.leading, 50)
-                                    profileRow(icon: "doc.text", title: "用户服务协议", value: "条款与版权声明") {
-                                        showAgreementSheet = true
-                                    }
-                                }
-                                .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
-                            }
-
-                            // 组 3：应用支持与关于
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("应用支持与关于")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(Color.gray)
-                                    .padding(.leading, 8)
-
-                                VStack(spacing: 0) {
-                                    profileRow(icon: "star", title: "鼓励并评价栖光", value: "App Store 评分") {
-                                        requestReview()
-                                    }
-                                    Divider().padding(.leading, 50)
-                                    profileRow(icon: "info.circle", title: "关于栖光", value: "v1.0.0 正式版") {
-                                        toastMessage = "栖光 v1.0.0 正式版，感谢您的陪伴。"
-                                    }
-                                }
-                                .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
+                            Divider().padding(.leading, 50)
+                            profileRow(icon: "doc.text", title: "服务协议", value: "") {
+                                showAgreementSheet = true
                             }
                         }
-                        .padding(.horizontal, 20)
+                        .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
 
-                        // 3. 底部 Minimalist Footer 标语
-                        VStack(spacing: 4) {
-                            Text("QIGUANG STUDIO · EDITORIAL MINIMALISM")
-                                .font(.system(size: 10, weight: .bold))
-                                .tracking(1.8)
-                                .foregroundStyle(Color.gray.opacity(0.6))
+                        // 2. 基础轻量管理工具
+                        VStack(spacing: 0) {
+                            profileRow(icon: "trash", title: "清除缓存", value: cacheSize) {
+                                cacheSize = "0.0 MB"
+                                toastMessage = "已成功清除本地缓存"
+                            }
+                            Divider().padding(.leading, 50)
+                            profileRow(icon: "info.circle", title: "关于栖光", value: "v1.0.0") {
+                                toastMessage = "栖光 v1.0.0 正式版"
+                            }
                         }
-                        .padding(.top, 12)
+                        .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: .black.opacity(0.03), radius: 8, x: 0, y: 3)
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 28)
                     .padding(.bottom, 100)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .onAppear {
-                MemoryPosterManager.shared.loadPosters()
-                posterCount = MemoryPosterManager.shared.posters.count
-            }
             .sheet(isPresented: $showPrivacySheet) {
                 PrivacyPolicySheet()
             }
