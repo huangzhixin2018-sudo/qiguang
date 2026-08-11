@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 import PhotosUI
+import StoreKit
 
 struct ContentView: View {
     @State private var selectedTab = 0
@@ -2574,7 +2575,8 @@ struct ProfileView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .onAppear {
-                posterCount = MemoryPosterManager.shared.loadPosters().count
+                MemoryPosterManager.shared.loadPosters()
+                posterCount = MemoryPosterManager.shared.posters.count
             }
             .sheet(isPresented: $showPrivacySheet) {
                 PrivacyPolicySheet()
