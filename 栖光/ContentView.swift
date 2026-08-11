@@ -658,14 +658,10 @@ private struct CreatePersonPosterSheet: View {
                                             selectedCategory = category
                                         }
                                     } label: {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: category.defaultIcon)
-                                                .font(.system(size: 12, weight: .medium))
-                                            Text(category.rawValue)
-                                                .font(.system(size: 14, weight: .medium))
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 10)
+                                        Text(category.rawValue)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 9)
                                         .background(
                                             selectedCategory == category ? category.defaultAccent : Color(red: 0.95, green: 0.94, blue: 0.91)
                                         )
