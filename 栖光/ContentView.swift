@@ -1482,37 +1482,40 @@ private struct NewCollectionSheet: View {
 }
 
 
-// MARK: - 独立年度照片整理页：YearsOrganizerView (静态美学样板)
+// MARK: - 独立年度照片整理页：YearsOrganizerView (精装大书特刊美学)
 struct YearsOrganizerView: View {
-    private let sampleYears: [(year: String, count: Int, style: VHSTapeCard.VHSStyle)] = [
-        ("2025", 384, .cream),
-        ("2024", 1020, .red),
-        ("2023", 640, .navy)
+    private let sampleYears: [(year: String, count: Int, color: Color, title: String, subtitle: String)] = [
+        ("2025", 384, Color(red: 0.62, green: 0.78, blue: 0.88), "栖光 · 年鉴", "HABITATS"), // 天青蓝 (截图参考图同款)
+        ("2024", 1020, Color(red: 0.85, green: 0.81, blue: 0.75), "时光 · 特刊", "MEMORIES"), // 燕麦暖沙
+        ("2023", 640, Color(red: 0.74, green: 0.80, blue: 0.76), "岁月 · 归档", "CHRONICLE"), // 鼠尾草绿
+        ("2022", 412, Color(red: 0.84, green: 0.75, blue: 0.72), "记忆 · 画册", "LOOKBACK")   // 陶土暖粉
     ]
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 20) {
-                // 简洁双列年度画报封面网格 (取消多余副标题与繁杂标语)
+                // 经典精装大书双列封面网格
                 LazyVGrid(
                     columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
-                    spacing: 22
+                    spacing: 24
                 ) {
                     ForEach(sampleYears, id: \.year) { item in
                         NavigationLink {
                             YearDetailView(year: item.year, count: item.count)
                         } label: {
                             VStack(alignment: .leading, spacing: 10) {
-                                VHSTapeCard(
+                                HardcoverAnnualBookCard(
                                     year: item.year,
-                                    style: item.style
+                                    color: item.color,
+                                    title: item.title,
+                                    subtitle: item.subtitle
                                 )
 
                                 HStack(spacing: 5) {
                                     Image(systemName: "photo.stack.fill")
                                         .font(.system(size: 11))
                                     Text("\(item.count) 张精彩记忆")
-                                        .font(.system(size: 13, weight: .semibold, design: .serif))
+                                        .font(.system(size: 12, weight: .semibold, design: .serif))
                                 }
                                 .foregroundStyle(Color(red: 0.35, green: 0.32, blue: 0.30))
                                 .padding(.leading, 4)
@@ -1604,137 +1607,93 @@ private struct YearDetailView: View {
     }
 }
 
-// MARK: - 编辑部极简年度归档封面卡片 (Editorial Year Archive Cover Card)
-private struct VHSTapeCard: View {
+// MARK: - 📖 典藏级精装特刊大书封面 (1:1 还原 Coffee Table Book 物理质感)
+private struct HardcoverAnnualBookCard: View {
     let year: String
-    let style: VHSStyle
-
-    enum VHSStyle {
-        case cream
-        case red
-        case navy
-    }
+    let color: Color
+    let title: String
+    let subtitle: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            switch style {
-            case .cream:
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("ANNUAL ARCHIVE")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color(red: 0.55, green: 0.50, blue: 0.45))
-                            .tracking(2)
-                        Spacer()
-                        Circle()
-                            .fill(Color(red: 0.85, green: 0.45, blue: 0.25))
-                            .frame(width: 6, height: 6)
-                    }
+        ZStack(alignment: .leading) {
+            // 1. 硬皮织物/麻布特种纸精装底板
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(color)
 
-                    Spacer()
+            // 2. 封面版面排版内容 (顶部衬线大标题 + 中央内嵌照片框 + 底部年份)
+            VStack(spacing: 0) {
+                // 顶部编辑部标题
+                VStack(spacing: 3) {
+                    Text("THE")
+                        .font(.system(size: 8, weight: .bold, design: .serif))
+                        .foregroundStyle(Color.white.opacity(0.85))
+                        .tracking(1.5)
+
+                    Text(title)
+                        .font(.system(size: 13, weight: .bold, design: .serif))
+                        .foregroundStyle(Color.white)
+                        .tracking(1.8)
+                }
+                .padding(.top, 16)
+
+                Spacer(minLength: 0)
+
+                // 中央下沉式压印照片框 (Debossed Window Inset Box)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(Color.black.opacity(0.08))
+
+                    Image("HomeSingle01")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 86, height: 104)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .stroke(Color.black.opacity(0.12), lineWidth: 0.8)
+                        )
+                        .shadow(color: .black.opacity(0.20), radius: 4, x: 0, y: 2)
+                }
+                .frame(width: 92, height: 110)
+
+                Spacer(minLength: 0)
+
+                // 底部副标题与年份
+                VStack(spacing: 3) {
+                    Text(subtitle)
+                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.75))
+                        .tracking(1.6)
 
                     Text(year)
-                        .font(.system(size: 38, weight: .bold, design: .serif))
-                        .foregroundStyle(Color(red: 0.18, green: 0.16, blue: 0.15))
-
-                    Spacer()
-
-                    HStack {
-                        Text("COLLECTION")
-                            .font(.system(size: 8, weight: .bold, design: .serif))
-                            .foregroundStyle(Color(red: 0.45, green: 0.40, blue: 0.35))
-                        Spacer()
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Color(red: 0.55, green: 0.50, blue: 0.45))
-                    }
+                        .font(.system(size: 13, weight: .heavy, design: .serif))
+                        .foregroundStyle(Color.white)
+                        .tracking(2.0)
                 }
-                .padding(16)
-                .frame(height: 180)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(red: 0.96, green: 0.95, blue: 0.91))
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                )
-
-            case .red:
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("MEMORIES")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.75))
-                            .tracking(2)
-                        Spacer()
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: 6, height: 6)
-                    }
-
-                    Spacer()
-
-                    Text(year)
-                        .font(.system(size: 38, weight: .bold, design: .serif))
-                        .foregroundStyle(.white)
-
-                    Spacer()
-
-                    HStack {
-                        Text("VOL. \(year.suffix(2))")
-                            .font(.system(size: 8, weight: .bold, design: .serif))
-                            .foregroundStyle(.white.opacity(0.85))
-                        Spacer()
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
-                }
-                .padding(16)
-                .frame(height: 180)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(red: 0.72, green: 0.28, blue: 0.22))
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-
-            case .navy:
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("CHRONICLE")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.75))
-                            .tracking(2)
-                        Spacer()
-                        Circle()
-                            .fill(Color(red: 0.95, green: 0.75, blue: 0.35))
-                            .frame(width: 6, height: 6)
-                    }
-
-                    Spacer()
-
-                    Text(year)
-                        .font(.system(size: 38, weight: .bold, design: .serif))
-                        .foregroundStyle(.white)
-
-                    Spacer()
-
-                    HStack {
-                        Text("LOOKBACK")
-                            .font(.system(size: 8, weight: .bold, design: .serif))
-                            .foregroundStyle(.white.opacity(0.85))
-                        Spacer()
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
-                }
-                .padding(16)
-                .frame(height: 180)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(red: 0.20, green: 0.24, blue: 0.30))
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .padding(.bottom, 16)
             }
+            .frame(maxWidth: .infinity)
+
+            // 3. 左侧 3D 精装书装订压痕线 (Spine Hinge Groove Line)
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.black.opacity(0.14))
+                    .frame(width: 1)
+                Rectangle()
+                    .fill(Color.white.opacity(0.35))
+                    .frame(width: 1)
+            }
+            .padding(.leading, 18)
         }
-        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
+        .frame(height: 220)
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(Color.white.opacity(0.25), lineWidth: 0.8)
+        )
+        .shadow(color: .black.opacity(0.18), radius: 10, x: 5, y: 6)
+        .shadow(color: .black.opacity(0.08), radius: 3, x: 2, y: 2)
     }
 }
 
