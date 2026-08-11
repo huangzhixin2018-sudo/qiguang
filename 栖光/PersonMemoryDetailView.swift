@@ -53,34 +53,24 @@ struct PersonMemoryDetailView: View {
                 // 背景：点阵网格微纹理底版 (1:1 还原截图背景 Dot Grid)
                 DotGridBackground()
 
-                if poster.category == .celebrity {
-                    CelebrityMemoryDetailContentView(
-                        poster: poster,
-                        contentWidth: safeWidth,
-                        topInset: proxy.safeAreaInsets.top,
-                        selectedSection: $selectedSection,
-                        onAddVideo: { showVideoPicker = true }
-                    )
-                } else {
-                    StandardMemoryDetailContentView(
-                        poster: poster,
-                        safeWidth: safeWidth,
-                        coverImageData: coverImageData
-                    )
-                }
+                CelebrityMemoryDetailContentView(
+                    poster: poster,
+                    contentWidth: safeWidth,
+                    topInset: proxy.safeAreaInsets.top,
+                    selectedSection: $selectedSection,
+                    onAddVideo: { showVideoPicker = true }
+                )
 
-                if poster.category == .celebrity {
-                    CelebrityFloatingControls(
-                        topInset: proxy.safeAreaInsets.top,
-                        selectedSection: selectedSection,
-                        onBack: { dismiss() },
-                        onAddPhoto: { showPhotoPicker = true },
-                        onAddVideo: { showVideoPicker = true },
-                        onChangeCover: { showCoverPicker = true },
-                        onDelete: { showDeleteConfirmation = true }
-                    )
-                    .zIndex(10)
-                }
+                CelebrityFloatingControls(
+                    topInset: proxy.safeAreaInsets.top,
+                    selectedSection: selectedSection,
+                    onBack: { dismiss() },
+                    onAddPhoto: { showPhotoPicker = true },
+                    onAddVideo: { showVideoPicker = true },
+                    onChangeCover: { showCoverPicker = true },
+                    onDelete: { showDeleteConfirmation = true }
+                )
+                .zIndex(10)
             }
         }
     }
@@ -88,68 +78,8 @@ struct PersonMemoryDetailView: View {
     var body: some View {
         mainContent
             .navigationBarBackButtonHidden(true)
-        .toolbar {
-            if poster.category != .celebrity {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(Color.white)
-                            .frame(width: 38, height: 38)
-                            .background(Color.black.opacity(0.5), in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 10) {
-                        Menu {
-                            Button {
-                                showPhotoPicker = true
-                            } label: {
-                                Label("添加照片", systemImage: "photo")
-                            }
-                            Button {
-                                showVideoPicker = true
-                            } label: {
-                                Label("添加视频", systemImage: "video")
-                            }
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(Color.white)
-                                .frame(width: 38, height: 38)
-                                .background(Color.black.opacity(0.5), in: Circle())
-                        }
-                        .buttonStyle(.plain)
-
-                        Menu {
-                            Button {
-                                showCoverPicker = true
-                            } label: {
-                                Label("更换封面照片", systemImage: "rectangle.on.rectangle")
-                            }
-                            Button(role: .destructive) {
-                                showDeleteConfirmation = true
-                            } label: {
-                                Label("删除此画报", systemImage: "trash")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(Color.white)
-                                .frame(width: 38, height: 38)
-                                .background(Color.black.opacity(0.5), in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        }
-        .toolbar(poster.category == .celebrity ? .hidden : .automatic, for: .navigationBar)
-        .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar(.hidden, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
         .confirmationDialog("确定要删除此画报吗？", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button("删除画报", role: .destructive) {
                 deleteCurrentPoster()
@@ -1102,29 +1032,31 @@ private struct CelebritySectionTabs: View {
     @Binding var selection: CelebrityDetailSection
 
     var body: some View {
-        HStack(spacing: 8) {
-            ForEach(CelebrityDetailSection.allCases) { section in
-                let isSelected = section == selection
-                Button {
-                    selection = section
-                } label: {
-                    Text(section.title)
-                        .font(.system(size: 14, weight: isSelected ? .bold : .medium))
-                        .foregroundStyle(isSelected ? Color.white : Color.black.opacity(0.50))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(
-                            isSelected ? Color.black : Color.white.opacity(0.65)
-                        )
-                        .clipShape(Capsule())
-                        .shadow(color: isSelected ? Color.black.opacity(0.08) : Color.clear, radius: 6, x: 0, y: 3)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(CelebrityDetailSection.allCases) { section in
+                    let isSelected = section == selection
+                    Button {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                            selection = section
+                        }
+                    } label: {
+                        Text(section.title)
+                            .font(.system(size: 14, weight: isSelected ? .bold : .medium))
+                            .foregroundStyle(isSelected ? Color.white : Color.black.opacity(0.65))
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 9)
+                            .background(
+                                isSelected ? Color.black : Color.white.opacity(0.75)
+                            )
+                            .clipShape(Capsule())
+                            .shadow(color: isSelected ? Color.black.opacity(0.10) : Color.black.opacity(0.02), radius: 6, x: 0, y: 3)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
-
-            Spacer()
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 2)
     }
 }
 
