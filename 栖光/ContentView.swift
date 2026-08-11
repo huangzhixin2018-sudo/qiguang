@@ -16,7 +16,7 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
-                    Label("首页", systemImage: "house")
+                    Label("首页", systemImage: "circle")
                 }
                 .tag(0)
 
@@ -28,7 +28,7 @@ struct ContentView: View {
 
             StoriesView()
                 .tabItem {
-                    Label("故事", systemImage: "book.closed")
+                    Label("故事", systemImage: "rectangle.portrait")
                 }
                 .tag(2)
 
@@ -1501,7 +1501,6 @@ struct YearsOrganizerView: View {
                     ForEach(sampleYears, id: \.year) { item in
                         NavigationLink {
                             YearDetailView(year: item.year, count: item.count)
-                                .hideTabBarOnRealDevice()
                         } label: {
                             VStack(alignment: .leading, spacing: 10) {
                                 VHSTapeCard(
@@ -1529,6 +1528,9 @@ struct YearsOrganizerView: View {
         }
         .navigationTitle("年度相册")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbarVisibility(.hidden, for: .tabBar)
+        .hideTabBarOnRealDevice()
         .background(
             LinearGradient(
                 colors: [Color(red: 0.98, green: 0.97, blue: 0.95), Color(red: 0.95, green: 0.94, blue: 0.91)],
@@ -1596,6 +1598,9 @@ private struct YearDetailView: View {
         }
         .navigationTitle("\(year) 相册回放")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbarVisibility(.hidden, for: .tabBar)
+        .hideTabBarOnRealDevice()
     }
 }
 
