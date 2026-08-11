@@ -88,10 +88,7 @@ struct HomeView: View {
     
     private let categories: [HomeCategoryItem] = [
         HomeCategoryItem(id: "发现", title: "发现", iconName: "sparkles"),
-        HomeCategoryItem(id: "1", title: "单图", iconName: "square.fill"),
-        HomeCategoryItem(id: "2", title: "双图", iconName: "rectangle.split.2x1.fill"),
-        HomeCategoryItem(id: "3", title: "三图", iconName: "rectangle.split.3x1.fill"),
-        HomeCategoryItem(id: "4", title: "四图", iconName: "square.grid.2x2.fill")
+        HomeCategoryItem(id: "1", title: "单图", iconName: "square.fill")
     ]
 
     private let shortcuts: [HomeShortcut] = [
@@ -175,10 +172,7 @@ struct HomeView: View {
                         }
                         .padding(.top, 16)
 
-                        // 3. 条件渲染：
-                        // “发现”：保持原本经典功能快捷网格
-                        // “1”：单图排版模板集
-                        // “2/3/4”：多图排版（预留待开发）
+                        // 3. 条件渲染：发现与单图模板集
                         if selectedCategory == "发现" {
                             LazyVGrid(
                                 columns: [
@@ -225,12 +219,6 @@ struct HomeView: View {
                                     .padding(.vertical, 6)
                                 }
                             }
-                        } else {
-                            // 2, 3, 4：空白留白区
-                            VStack {
-                                Spacer(minLength: 120)
-                            }
-                            .frame(maxWidth: .infinity)
                         }
                     }
                     .padding(.bottom, 120)
@@ -911,21 +899,11 @@ final class StoryDataManager: ObservableObject {
         }
     }
 
-    func clearAllDataAndCache() -> Double {
-        let cacheBytes = getStorageSizeInBytes()
-
-        UserDefaults.standard.removeObject(forKey: collectionsListKey)
-        UserDefaults.standard.removeObject(forKey: oldCollectionsKey)
-        UserDefaults.standard.removeObject(forKey: oldThemeKey)
-        self.collections = []
-        self.entries = []
-
-        let dir = storageDirectory
-        if FileManager.default.fileExists(atPath: dir.path) {
-            try? FileManager.default.removeItem(at: dir)
-        }
-
+    @discardableResult
+    func clearCache() -> Int64 {
+        let cacheBytes = cacheSizeInBytes()
         URLCache.shared.removeAllCachedResponses()
+
         let tmpDir = FileManager.default.temporaryDirectory
         if let tmpFiles = try? FileManager.default.contentsOfDirectory(at: tmpDir, includingPropertiesForKeys: nil) {
             for file in tmpFiles {
@@ -933,30 +911,33 @@ final class StoryDataManager: ObservableObject {
             }
         }
 
-        return Double(cacheBytes) / (1024.0 * 1024.0)
+        return cacheBytes
     }
 
-    func getStorageSizeInBytes() -> Int64 {
-        var totalSize: Int64 = 0
-        let dir = storageDirectory
-        if let files = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.fileSizeKey]) {
-            for file in files {
-                if let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) {
-                    totalSize += Int64(size)
-                }
-            }
+    func cacheSizeInBytes() -> Int64 {
+        let urlCacheBytes = Int64(URLCache.shared.currentDiskUsage)
+        let temporaryBytes = directorySize(at: FileManager.default.temporaryDirectory)
+        return max(urlCacheBytes + temporaryBytes, 0)
+    }
+
+    private func directorySize(at directory: URL) -> Int64 {
+        let keys: [URLResourceKey] = [.isRegularFileKey, .fileSizeKey]
+        guard let enumerator = FileManager.default.enumerator(
+            at: directory,
+            includingPropertiesForKeys: keys,
+            options: [.skipsHiddenFiles]
+        ) else {
+            return 0
         }
 
-        let tmpDir = FileManager.default.temporaryDirectory
-        if let tmpFiles = try? FileManager.default.contentsOfDirectory(at: tmpDir, includingPropertiesForKeys: [.fileSizeKey]) {
-            for file in tmpFiles {
-                if let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) {
-                    totalSize += Int64(size)
-                }
+        return enumerator.compactMap { $0 as? URL }.reduce(into: Int64(0)) { total, file in
+            guard let values = try? file.resourceValues(forKeys: Set(keys)),
+                  values.isRegularFile == true,
+                  let fileSize = values.fileSize else {
+                return
             }
+            total += Int64(fileSize)
         }
-
-        return max(totalSize, 0)
     }
 }
 
@@ -1446,11 +1427,12 @@ private struct NewCollectionSheet: View {
 // MARK: - 独立年度照片整理页：YearsOrganizerView (精装大书特刊美学)
 struct YearsOrganizerView: View {
     @Environment(\.dismiss) private var dismiss
-    private let sampleYears: [(year: String, color: Color)] = [
-        ("2026", Color(red: 0.25, green: 0.36, blue: 0.28)),
-        ("2025", Color(red: 0.52, green: 0.65, blue: 0.70)),
-        ("2024", Color(red: 0.66, green: 0.62, blue: 0.54)),
-        ("2023", Color(red: 0.55, green: 0.45, blue: 0.44))
+    @StateObject private var photoStore = AnnualLatestPhotoStore()
+    private let coverColors: [Color] = [
+        Color(red: 0.25, green: 0.36, blue: 0.28),
+        Color(red: 0.52, green: 0.65, blue: 0.70),
+        Color(red: 0.66, green: 0.62, blue: 0.54),
+        Color(red: 0.55, green: 0.45, blue: 0.44)
     ]
 
     var body: some View {
@@ -1490,16 +1472,12 @@ struct YearsOrganizerView: View {
                         columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
                         spacing: 24
                     ) {
-                        ForEach(sampleYears, id: \.year) { item in
-                            NavigationLink {
-                                YearDetailView(year: item.year)
-                            } label: {
-                                HardcoverAnnualBookCard(
-                                    year: item.year,
-                                    color: item.color
-                                )
-                            }
-                            .buttonStyle(.plain)
+                        ForEach(Array(photoStore.availableYears.enumerated()), id: \.element) { index, year in
+                            HardcoverAnnualBookCard(
+                                year: year,
+                                color: coverColors[index % coverColors.count],
+                                image: photoStore.imagesByYear[year]
+                            )
                         }
                     }
                     .padding(.horizontal, 20)
@@ -1512,6 +1490,9 @@ struct YearsOrganizerView: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbarVisibility(.hidden, for: .tabBar)
         .hideTabBarOnRealDevice()
+        .task {
+            await photoStore.loadAvailableYears()
+        }
         .background(
             LinearGradient(
                 colors: [Color(red: 0.98, green: 0.97, blue: 0.95), Color(red: 0.95, green: 0.94, blue: 0.91)],
@@ -1523,217 +1504,11 @@ struct YearsOrganizerView: View {
     }
 }
 
-private struct SelectedAssetItem: Identifiable {
-    var id: String { asset.localIdentifier }
-    let asset: PHAsset
-}
-
-// MARK: - 某一年份的照片放映网格：YearDetailView (0ms 秒进秒退，极速交互)
-private struct YearDetailView: View {
-    let year: String
-    @Environment(\.dismiss) private var dismiss
-    @State private var fetchResult: PHFetchResult<PHAsset>?
-    @State private var isLoading = true
-    @State private var selectedAssetItem: SelectedAssetItem?
-
-    private var columns: [GridItem] {
-        [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)]
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // 自定义编辑部 Header (100% 可用返回按钮)
-            HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .bold))
-                        Text("返回")
-                            .font(.system(size: 15, weight: .semibold))
-                    }
-                    .foregroundStyle(Color(red: 0.25, green: 0.22, blue: 0.20))
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                Text("\(year) 年相册")
-                    .font(.system(size: 17, weight: .bold, design: .serif))
-                    .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.16))
-
-                Spacer()
-
-                Color.clear.frame(width: 50, height: 20)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 12)
-
-            ZStack {
-                Color(red: 0.98, green: 0.97, blue: 0.95)
-                    .ignoresSafeArea()
-
-                if isLoading {
-                    VStack(spacing: 12) {
-                        ProgressView()
-                        Text("检索中...")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.gray)
-                    }
-                } else if let fetchResult, fetchResult.count > 0 {
-                    ScrollView(showsIndicators: false) {
-                        LazyVGrid(columns: columns, spacing: 4) {
-                            ForEach(0..<fetchResult.count, id: \.self) { index in
-                                let asset = fetchResult.object(at: index)
-                                LazyAssetGridCell(asset: asset)
-                                    .onTapGesture {
-                                        selectedAssetItem = SelectedAssetItem(asset: asset)
-                                    }
-                            }
-                        }
-                        .padding(.horizontal, 4)
-                        .padding(.top, 4)
-                        .padding(.bottom, 40)
-                    }
-                } else {
-                    VStack(spacing: 12) {
-                        Image(systemName: "photo.on.rectangle")
-                            .font(.system(size: 32, weight: .light))
-                            .foregroundStyle(Color.gray)
-                        Text("\(year) 年暂无相册照片")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.gray)
-                    }
-                }
-            }
-        }
-        .toolbar(.hidden, for: .navigationBar)
-        .toolbar(.hidden, for: .tabBar)
-        .toolbarVisibility(.hidden, for: .tabBar)
-        .hideTabBarOnRealDevice()
-        .task {
-            loadYearAssetsSync()
-        }
-        .sheet(item: $selectedAssetItem) { item in
-            AssetPhotoDetailPreview(asset: item.asset)
-        }
-    }
-
-    private func loadYearAssetsSync() {
-        let calendar = Calendar.current
-        let yearInt = Int(year) ?? 2026
-        var components = DateComponents()
-        components.year = yearInt
-        components.month = 1
-        components.day = 1
-        let startDate = calendar.date(from: components) ?? Date()
-        components.year = yearInt + 1
-        let endDate = calendar.date(from: components) ?? Date()
-
-        let options = PHFetchOptions()
-        options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", startDate as NSDate, endDate as NSDate)
-        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-
-        let result = PHAsset.fetchAssets(with: .image, options: options)
-        self.fetchResult = result
-        self.isLoading = false
-    }
-}
-
-// MARK: - 懒加载单个 Asset 缩略图单元格 (屏幕划入时按需取 150x150 缩略图)
-private struct LazyAssetGridCell: View {
-    let asset: PHAsset
-    @State private var thumbnail: UIImage?
-
-    var body: some View {
-        ZStack {
-            if let thumbnail {
-                Image(uiImage: thumbnail)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 120)
-                    .clipped()
-            } else {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.12))
-                    .frame(height: 120)
-            }
-        }
-        .onAppear {
-            loadThumbnail()
-        }
-    }
-
-    private func loadThumbnail() {
-        guard thumbnail == nil else { return }
-        let manager = PHImageManager.default()
-        let option = PHImageRequestOptions()
-        option.isSynchronous = false
-        option.deliveryMode = .fastFormat
-        option.isNetworkAccessAllowed = false
-
-        manager.requestImage(for: asset, targetSize: CGSize(width: 150, height: 150), contentMode: .aspectFill, options: option) { img, _ in
-            if let img {
-                DispatchQueue.main.async {
-                    self.thumbnail = img
-                }
-            }
-        }
-    }
-}
-
-// MARK: - 单张照片高清大图预览
-private struct AssetPhotoDetailPreview: View {
-    let asset: PHAsset
-    @Environment(\.dismiss) private var dismiss
-    @State private var fullImage: UIImage?
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-
-                if let fullImage {
-                    Image(uiImage: fullImage)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(10)
-                } else {
-                    ProgressView()
-                        .tint(.white)
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
-                        .foregroundStyle(.white)
-                        .font(.system(size: 15, weight: .bold))
-                }
-            }
-            .task {
-                let manager = PHImageManager.default()
-                let option = PHImageRequestOptions()
-                option.isSynchronous = false
-                option.deliveryMode = .highQualityFormat
-                manager.requestImage(for: asset, targetSize: CGSize(width: 1080, height: 1920), contentMode: .aspectFit, options: option) { img, _ in
-                    if let img {
-                        DispatchQueue.main.async {
-                            self.fullImage = img
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // MARK: - 📖 典藏级精装特刊大书封面 (极致轻量，即刻渲染)
 private struct HardcoverAnnualBookCard: View {
     let year: String
     let color: Color
+    let image: UIImage?
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -1749,12 +1524,17 @@ private struct HardcoverAnnualBookCard: View {
                     .foregroundStyle(Color.black.opacity(0.78))
                     .frame(height: 24)
 
-                Image("HomeSingle01")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 76, height: 60)
-                    .scaleEffect(1.45)
-                    .clipped()
+                Group {
+                    if let image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Color.black.opacity(0.04)
+                    }
+                }
+                .frame(width: 76, height: 60)
+                .clipped()
             }
             .padding(.horizontal, 10)
             .padding(.top, 8)
@@ -2649,6 +2429,7 @@ private struct FilmCardTileItem: View {
 
 
 struct ProfileView: View {
+    @ObservedObject private var dataManager = StoryDataManager.shared
     @State private var cacheSize = "0.0 MB"
     @State private var toastMessage: String?
     @State private var showPrivacySheet = false
@@ -2677,8 +2458,9 @@ struct ProfileView: View {
                         // 2. 基础轻量管理工具
                         VStack(spacing: 0) {
                             profileRow(icon: "trash", title: "清除缓存", value: cacheSize) {
-                                cacheSize = "0.0 MB"
-                                toastMessage = "已成功清除本地缓存"
+                                let clearedBytes = dataManager.clearCache()
+                                cacheSize = formattedCacheSize(dataManager.cacheSizeInBytes())
+                                toastMessage = clearedBytes > 0 ? "已清除 \(formattedCacheSize(clearedBytes)) 缓存" : "暂无可清除的缓存"
                             }
                             Divider().padding(.leading, 50)
                             profileRow(icon: "info.circle", title: "关于栖光", value: "v1.0.0") {
@@ -2694,6 +2476,9 @@ struct ProfileView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            .onAppear {
+                cacheSize = formattedCacheSize(dataManager.cacheSizeInBytes())
+            }
             .sheet(isPresented: $showPrivacySheet) {
                 PrivacyPolicySheet()
             }
@@ -2739,6 +2524,10 @@ struct ProfileView: View {
             .frame(height: 52)
         }
     }
+
+    private func formattedCacheSize(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
 }
 
 // MARK: - 隐私政策独立弹窗 (App Store Guideline 5.1.1 合规文案)
@@ -2767,17 +2556,17 @@ private struct PrivacyPolicySheet: View {
 
                         policySection(
                             title: "1. 我们如何收集和使用您的个人信息",
-                            content: "栖光遵循“合法、正当、必要”的原则，仅在向您提供功能所必需的前提下使用相关设备权限：\n\n• 相册读取与写入权限：当您使用栖光选取照片/视频创建回忆画报、制作切图壁纸、提取莫兰迪底盘配色或保存生成的画报到系统相册时。我们仅在您主动触发相关功能并授权后，访问您所选择的具体照片或视频。所选照片和视频的本地副本仅保存在您手机系统的沙盒（Documents）目录中，绝不会上传至任何云端或第三方服务器。\n\n• 设备本地日志与缓存：仅用于保持应用界面流畅运行及提供一键“清理缓存”功能，不会包含任何个人身份标识符。"
+                            content: "栖光遵循“合法、正当、必要”的原则，仅在向您提供功能所必需的前提下使用相关设备权限：\n\n• 照片与视频处理：当您主动选择照片或视频制作画报、提取配色或记录故事时，栖光仅处理您选择的内容。需要长期保存的故事内容仅存储在设备本地，不会上传至任何服务器。\n\n• 年度相册：当您进入年度相册并授权读取照片后，栖光会在设备本地读取授权范围内照片的拍摄年份，并为存在照片的年份读取最新一张照片作为封面。相关信息仅用于生成年度封面，不会上传或共享。若您选择有限照片权限，栖光只会读取您允许访问的照片。\n\n• 设备缓存：仅用于保持应用流畅运行。清除缓存只会删除可重新生成的临时文件和网络缓存，不会删除您保存的故事或照片。"
                         )
 
                         policySection(
                             title: "2. 系统权限调用说明",
-                            content: "• 相册读取权限 (NSPhotoLibraryUsageDescription)：允许您主动选取本地照片或视频导入 App 进行处理。\n• 相册保存权限 (NSPhotoLibraryAddUsageDescription)：允许您将制作好的画报与壁纸导出保存至手机系统相册。\n\n您可以在设备的“设置 - 隐私 - 照片”中随时管理或撤回上述授权。"
+                            content: "• 相册读取权限 (NSPhotoLibraryUsageDescription)：用于读取您主动选择的照片和视频，以及在年度相册中读取已授权照片的拍摄年份与年度封面。\n• 相册保存权限 (NSPhotoLibraryAddUsageDescription)：用于将您制作的图片保存至系统相册。\n\n您可以在设备的“设置 - 隐私 - 照片”中随时限制、管理或撤回授权。"
                         )
 
                         policySection(
                             title: "3. 数据的存储与安全",
-                            content: "栖光全量架构基于 iOS 设备本地沙盒安全机制构建。您的画报配置、事件记录、纪念票根以及导入的照片视频，均完全存储在您设备的本地存储空间中。当您卸载栖光 App 或通过 App 内“清理缓存”功能清理数据时，设备沙盒内存储的相关应用数据将被彻底抹除且不可恢复。"
+                            content: "栖光基于 iOS 设备本地沙盒安全机制运行。您的故事配置、事件记录以及保存到 App 的照片和视频均存储在设备本地。清除缓存不会删除这些用户内容；卸载栖光会删除 App 本地沙盒中的数据且无法恢复，请您自行做好备份。"
                         )
 
                         policySection(
