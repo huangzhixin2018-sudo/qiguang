@@ -1571,13 +1571,14 @@ private struct YearDetailView: View {
             options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
 
             let result = PHAsset.fetchAssets(with: .image, options: options)
-            var assets: [PHAsset] = []
-            result.enumerateObjects { asset, _, _ in
-                assets.append(asset)
+            var fetchedList: [PHAsset] = []
+            for index in 0..<result.count {
+                fetchedList.append(result.object(at: index))
             }
 
+            let finalAssets = fetchedList
             await MainActor.run {
-                self.fetchedAssets = assets
+                self.fetchedAssets = finalAssets
                 self.isLoading = false
             }
         }
