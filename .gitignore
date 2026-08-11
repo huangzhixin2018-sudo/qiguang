@@ -5,3 +5,8 @@ DerivedData/
 build_tmp/
 .agents/
 skills/
+
+# Local source artwork; optimized app assets live in Assets.xcassets.
+待处理图片/**
+!待处理图片/**/
+!待处理图片/**/.gitkeep

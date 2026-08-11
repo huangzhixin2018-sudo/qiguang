@@ -180,7 +180,7 @@ struct HomeView: View {
 
                         // 3. 条件渲染：
                         // “发现”：保持原本经典功能快捷网格
-                        // “1”：单图排版集（Summer Editorial 海洋光影、色块在上、杂志海报、玻璃色卡）
+                        // “1”：单图排版模板集
                         // “2/3/4”：多图排版（预留待开发）
                         if selectedCategory == "发现" {
                             LazyVGrid(
@@ -199,41 +199,33 @@ struct HomeView: View {
                             .padding(.top, 24)
                         } else if selectedCategory == "1" {
                             // 1 张照片排版模板集
-                            VStack(alignment: .leading, spacing: 14) {
+                            VStack(alignment: .leading, spacing: 16) {
                                 Text("单图画报集")
                                     .font(.system(size: 22, weight: .bold, design: .serif))
                                     .foregroundStyle(Color(red: 0.22, green: 0.20, blue: 0.20))
-                                    .padding(.horizontal, 24)
+                                    .padding(.horizontal, 22)
                                     .padding(.top, 20)
 
                                 ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 16) {
-                                        // 模板 1：海洋光影
+                                    HStack(alignment: .top, spacing: 14) {
+                                        // 模板 1：单图成品预览
                                         NavigationLink {
-                                            OceanPosterDetailView(title: "海洋光影")
+                                            OceanPosterDetailView(title: "Summer Editorial")
                                         } label: {
-                                            summerHorizonTemplateCard
+                                            singlePhotoTemplateCard
                                         }
                                         .buttonStyle(.plain)
 
-                                        // 模板 2：色块在上
+                                        // 模板 2：蓝色双色调网屏效果
                                         NavigationLink {
-                                            OceanPosterDetailView(title: "色块在上")
+                                            BlueprintGridEffectView()
                                         } label: {
-                                            editorialTemplatePreviewCard(title: "色块在上", sub: "顶栏吸色", bgGradient: [Color(red: 0.92, green: 0.89, blue: 0.85), Color(red: 0.82, green: 0.78, blue: 0.75)], icon: "rectangle.topthird.inset.filled")
-                                        }
-                                        .buttonStyle(.plain)
-
-                                        // 模板 3：杂志海报
-                                        NavigationLink {
-                                            OceanPosterDetailView(title: "杂志海报")
-                                        } label: {
-                                            editorialTemplatePreviewCard(title: "杂志海报", sub: "杂志画框", bgGradient: [Color(red: 0.94, green: 0.92, blue: 0.88), Color(red: 0.85, green: 0.80, blue: 0.75)], icon: "rectangle.inset.filled")
+                                            blueprintGridTemplateCard
                                         }
                                         .buttonStyle(.plain)
                                     }
-                                    .padding(.horizontal, 24)
-                                    .padding(.vertical, 4)
+                                    .padding(.horizontal, 22)
+                                    .padding(.vertical, 6)
                                 }
                             }
                         } else {
@@ -251,71 +243,36 @@ struct HomeView: View {
         }
     }
 
-    // 轻量极简微缩“海洋光影”卡片（纯中文标示）
-    private var summerHorizonTemplateCard: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                LinearGradient(
-                    colors: [Color(red: 0.98, green: 0.85, blue: 0.75), Color(red: 0.45, green: 0.75, blue: 0.80)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(width: 160, height: 170)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .padding(8)
-
-            VStack(spacing: 2) {
-                Text("2026.08.10")
-                    .font(.system(size: 8, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.black.opacity(0.4))
-                Text("海洋光影")
-                    .font(.system(size: 13, weight: .bold, design: .serif))
-                    .foregroundStyle(Color(red: 0.18, green: 0.18, blue: 0.22))
-                Text("日落海浪")
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundStyle(Color.black.opacity(0.35))
-            }
-            .padding(.bottom, 10)
-        }
-        .frame(width: 176)
-        .background(Color(red: 0.98, green: 0.97, blue: 0.96), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+    private var singlePhotoTemplateCard: some View {
+        singleTemplatePreview(
+            assetName: "HomeSingle01",
+            accessibilityLabel: "单图模板一"
         )
     }
 
-    // 轻量无重感模版预览卡片
-    private func editorialTemplatePreviewCard(title: String, sub: String, bgGradient: [Color], icon: String) -> some View {
-        VStack(spacing: 8) {
-            ZStack {
-                LinearGradient(colors: bgGradient, startPoint: .topLeading, endPoint: .bottomTrailing)
-                    .frame(width: 160, height: 170)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-                Image(systemName: icon)
-                    .font(.system(size: 32))
-                    .foregroundStyle(Color.white.opacity(0.85))
-            }
-            .padding(8)
-
-            VStack(spacing: 2) {
-                Text(title)
-                    .font(.system(size: 13, weight: .bold, design: .serif))
-                    .foregroundStyle(Color.primary)
-                Text(sub)
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.secondary)
-            }
-            .padding(.bottom, 10)
-        }
-        .frame(width: 176)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+    private var blueprintGridTemplateCard: some View {
+        singleTemplatePreview(
+            assetName: "HomeSingle02",
+            accessibilityLabel: "蓝晒网格效果"
         )
+    }
+
+    private func singleTemplatePreview(
+        assetName: String,
+        accessibilityLabel: String
+    ) -> some View {
+        Image(assetName)
+            .resizable()
+            .scaledToFill()
+            .frame(width: 172, height: 258)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 0.5)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 5)
+            .accessibilityLabel(accessibilityLabel)
     }
 }
 
