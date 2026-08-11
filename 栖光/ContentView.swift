@@ -1445,6 +1445,7 @@ private struct NewCollectionSheet: View {
 
 // MARK: - 独立年度照片整理页：YearsOrganizerView (精装大书特刊美学)
 struct YearsOrganizerView: View {
+    @Environment(\.dismiss) private var dismiss
     private let sampleYears: [(year: String, color: Color)] = [
         ("2026", Color(red: 0.25, green: 0.36, blue: 0.28)),
         ("2025", Color(red: 0.52, green: 0.65, blue: 0.70)),
@@ -1453,32 +1454,61 @@ struct YearsOrganizerView: View {
     ]
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
-                // 经典精装大书双列封面网格 (0 卡顿即时展开)
-                LazyVGrid(
-                    columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
-                    spacing: 24
-                ) {
-                    ForEach(sampleYears, id: \.year) { item in
-                        NavigationLink {
-                            YearDetailView(year: item.year)
-                        } label: {
-                            HardcoverAnnualBookCard(
-                                year: item.year,
-                                color: item.color
-                            )
-                        }
-                        .buttonStyle(.plain)
+        VStack(spacing: 0) {
+            // 自定义编辑部 Navigation Header (100% 保证点击与返回畅通无阻)
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .bold))
+                        Text("返回")
+                            .font(.system(size: 15, weight: .semibold))
                     }
+                    .foregroundStyle(Color(red: 0.25, green: 0.22, blue: 0.20))
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text("年度相册")
+                    .font(.system(size: 17, weight: .bold, design: .serif))
+                    .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.16))
+
+                Spacer()
+
+                Color.clear.frame(width: 50, height: 20)
             }
-            .padding(.bottom, 40)
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 12)
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    LazyVGrid(
+                        columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
+                        spacing: 24
+                    ) {
+                        ForEach(sampleYears, id: \.year) { item in
+                            NavigationLink {
+                                YearDetailView(year: item.year)
+                            } label: {
+                                HardcoverAnnualBookCard(
+                                    year: item.year,
+                                    color: item.color
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                }
+                .padding(.bottom, 40)
+            }
         }
-        .navigationTitle("年度相册")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .toolbarVisibility(.hidden, for: .tabBar)
         .hideTabBarOnRealDevice()
@@ -1498,9 +1528,10 @@ private struct SelectedAssetItem: Identifiable {
     let asset: PHAsset
 }
 
-// MARK: - 某一年份的照片放映网格：YearDetailView (直接利用 Apple PHFetchResult 惰性句柄，0ms秒进不卡顿)
+// MARK: - 某一年份的照片放映网格：YearDetailView (0ms 秒进秒退，极速交互)
 private struct YearDetailView: View {
     let year: String
+    @Environment(\.dismiss) private var dismiss
     @State private var fetchResult: PHFetchResult<PHAsset>?
     @State private var isLoading = true
     @State private var selectedAssetItem: SelectedAssetItem?
@@ -1510,86 +1541,104 @@ private struct YearDetailView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color(red: 0.98, green: 0.97, blue: 0.95)
-                .ignoresSafeArea()
-
-            if isLoading {
-                VStack(spacing: 12) {
-                    ProgressView()
-                    Text("检索中...")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.gray)
-                }
-            } else if let fetchResult, fetchResult.count > 0 {
-                ScrollView(showsIndicators: false) {
-                    LazyVGrid(columns: columns, spacing: 4) {
-                        ForEach(0..<fetchResult.count, id: \.self) { index in
-                            let asset = fetchResult.object(at: index)
-                            LazyAssetGridCell(asset: asset)
-                                .onTapGesture {
-                                    selectedAssetItem = SelectedAssetItem(asset: asset)
-                                }
-                        }
+        VStack(spacing: 0) {
+            // 自定义编辑部 Header (100% 可用返回按钮)
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .bold))
+                        Text("返回")
+                            .font(.system(size: 15, weight: .semibold))
                     }
-                    .padding(.horizontal, 4)
-                    .padding(.top, 8)
-                    .padding(.bottom, 40)
+                    .foregroundStyle(Color(red: 0.25, green: 0.22, blue: 0.20))
                 }
-            } else {
-                VStack(spacing: 12) {
-                    Image(systemName: "photo.on.rectangle")
-                        .font(.system(size: 32, weight: .light))
-                        .foregroundStyle(Color.gray)
-                    Text("\(year) 年暂无相册照片")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.gray)
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text("\(year) 年相册")
+                    .font(.system(size: 17, weight: .bold, design: .serif))
+                    .foregroundStyle(Color(red: 0.20, green: 0.18, blue: 0.16))
+
+                Spacer()
+
+                Color.clear.frame(width: 50, height: 20)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 12)
+
+            ZStack {
+                Color(red: 0.98, green: 0.97, blue: 0.95)
+                    .ignoresSafeArea()
+
+                if isLoading {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("检索中...")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.gray)
+                    }
+                } else if let fetchResult, fetchResult.count > 0 {
+                    ScrollView(showsIndicators: false) {
+                        LazyVGrid(columns: columns, spacing: 4) {
+                            ForEach(0..<fetchResult.count, id: \.self) { index in
+                                let asset = fetchResult.object(at: index)
+                                LazyAssetGridCell(asset: asset)
+                                    .onTapGesture {
+                                        selectedAssetItem = SelectedAssetItem(asset: asset)
+                                    }
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                        .padding(.top, 4)
+                        .padding(.bottom, 40)
+                    }
+                } else {
+                    VStack(spacing: 12) {
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.system(size: 32, weight: .light))
+                            .foregroundStyle(Color.gray)
+                        Text("\(year) 年暂无相册照片")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.gray)
+                    }
                 }
             }
         }
-        .navigationTitle("\(year) 年相册")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .toolbarVisibility(.hidden, for: .tabBar)
         .hideTabBarOnRealDevice()
         .task {
-            loadYearAssetsLazy()
+            loadYearAssetsSync()
         }
         .sheet(item: $selectedAssetItem) { item in
             AssetPhotoDetailPreview(asset: item.asset)
         }
     }
 
-    private func loadYearAssetsLazy() {
-        PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
-            guard status == .authorized || status == .limited else {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                }
-                return
-            }
+    private func loadYearAssetsSync() {
+        let calendar = Calendar.current
+        let yearInt = Int(year) ?? 2026
+        var components = DateComponents()
+        components.year = yearInt
+        components.month = 1
+        components.day = 1
+        let startDate = calendar.date(from: components) ?? Date()
+        components.year = yearInt + 1
+        let endDate = calendar.date(from: components) ?? Date()
 
-            let options = PHFetchOptions()
-            let calendar = Calendar.current
-            let yearInt = Int(year) ?? 2026
-            var components = DateComponents()
-            components.year = yearInt
-            components.month = 1
-            components.day = 1
-            let startDate = calendar.date(from: components) ?? Date()
-            components.year = yearInt + 1
-            let endDate = calendar.date(from: components) ?? Date()
+        let options = PHFetchOptions()
+        options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", startDate as NSDate, endDate as NSDate)
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
 
-            options.predicate = NSPredicate(format: "creationDate >= %@ AND creationDate < %@", startDate as NSDate, endDate as NSDate)
-            options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-
-            let result = PHAsset.fetchAssets(with: .image, options: options)
-
-            DispatchQueue.main.async {
-                self.fetchResult = result
-                self.isLoading = false
-            }
-        }
+        let result = PHAsset.fetchAssets(with: .image, options: options)
+        self.fetchResult = result
+        self.isLoading = false
     }
 }
 
